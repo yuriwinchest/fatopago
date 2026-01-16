@@ -6,7 +6,6 @@ import {
     BarChart2,
     Copy,
     CheckCircle,
-    Medal,
     Home,
     User,
     ShieldCheck,
@@ -41,7 +40,6 @@ interface NewsTask {
 
 const Dashboard = () => {
     const navigate = useNavigate();
-    const [selectedTab, setSelectedTab] = useState<'cidade' | 'estado' | 'brasil'>('cidade');
     const [loading, setLoading] = useState(true);
     const [profile, setProfile] = useState<UserProfile | null>(null);
     const [tasks, setTasks] = useState<NewsTask[]>([]);
