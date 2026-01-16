@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>FatoPago - Plataforma de Verificação de Notícias</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#8a2ce2",
+                        "purple-deep": "#4B0082",
+                        "purple-vibrant": "#8a2ce2",
+                        "purple-light": "#BB86FC",
+                        "brand-dark": "#12005E",
+                        "card-bg": "#FFFFFF",
+                    },
+                    fontFamily: {
+                        sans: ["Inter", "sans-serif"],
+                    },
+                    borderRadius: {
+                        'md': '0.75rem',
+                    },
+                    boxShadow: {
+                        'soft': '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)',
+                        'purple-glow': '0 0 20px rgba(138, 44, 226, 0.3)',
+                    }
+                },
+            },
+        };
+    </script>
+    <style type="text/tailwindcss">
+        @layer base {
+            body { @apply font-sans antialiased; }
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .news-card-hover { transition: all 0.2s ease-in-out; }
+        .news-card-hover:hover { transform: translateY(-4px); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15); }
+        .plan-card-hover { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .plan-card-hover:hover { transform: translateY(-8px); box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.1); }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #BB86FC; border-radius: 10px; }
+    </style>
+</head>
+<body class="bg-[#12005E] text-white min-h-screen">
+    <div id="root"></div>
+
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/history@5/umd/history.development.js"></script>
+    <script src="https://unpkg.com/react-router@6.3.0/umd/react-router.development.js"></script>
+    <script src="https://unpkg.com/react-router-dom@6.3.0/umd/react-router-dom.development.js"></script>
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        const { createRoot } = ReactDOM;
+        const { MemoryRouter, Routes, Route, Link, useNavigate, useLocation } = ReactRouterDOM;
+
+        // --- Components ---
+
+        const Navbar = ({ variant = "dark" }) => {
+            const isWhite = variant === "white";
+            return (
+                <nav className={`sticky top-0 z-50 ${isWhite ? 'bg-white' : 'bg-[#12005E]/95 backdrop-blur-xl border-b border-white/10'}`}>
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                        <div className="flex justify-between h-16 items-center">
+                            <Link to="/register" className="flex items-center gap-2">
+                                <span className={`material-symbols-outlined text-3xl ${isWhite ? 'text-primary' : 'text-purple-light'}`}>verified</span>
+                                <span className={`text-xl font-bold tracking-tight ${isWhite ? 'text-purple-deep' : 'text-white'}`}>FatoPago</span>
+                            </Link>
+                            <div className="hidden md:flex items-center space-x-8">
+                                <Link to="/" className={`text-sm font-medium ${isWhite ? 'text-purple-deep/70 hover:text-purple-deep' : 'text-white/70 hover:text-white'} transition-colors`}>Início</Link>
+                                <Link to="/" className={`text-sm font-bold ${isWhite ? 'text-primary border-b-2 border-primary' : 'text-white border-b-2 border-purple-light'} py-5`}>Validar Notícias</Link>
+                                <Link to="/plans" className={`text-sm font-medium ${isWhite ? 'text-purple-deep/70 hover:text-purple-deep' : 'text-white/70 hover:text-white'} transition-colors`}>Planos</Link>
+                                <Link to="/details" className={`text-sm font-medium ${isWhite ? 'text-purple-deep/70 hover:text-purple-deep' : 'text-white/70 hover:text-white'} transition-colors`}>Ranking</Link>
+                            </div>
+                            <div className="flex items-center gap-4">
+                                <div className="text-right hidden sm:block">
+                                    <p className={`text-[10px] font-semibold ${isWhite ? 'text-purple-deep/50' : 'text-white/50'} uppercase tracking-widest`}>Saldo Disponível</p>
+                                    <p className={`text-lg font-bold ${isWhite ? 'text-purple-deep' : 'text-white'}`}>R$ 67,50</p>
+                                </div>
+                                <div className={`h-10 w-10 rounded-full ${isWhite ? 'bg-purple-deep/5' : 'bg-white/10'} flex items-center justify-center overflow-hidden border-2 border-white/10`}>
+                                    <img alt="Avatar" className="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCvO69QKcbL7eaKs4Q5EVkikX8JSVhdOaueBB7InRXiux4OZqkvNrMXy7U4nl1JOxOhLf5Peou-kwWgMhwAymEAWbQxL-fnXgusSEm4k0tK2SnHFrxt5tGTG74HjeTkkDPG6MFuer7qX60hzj9CjYXP29mbvIxItRH-yX8aaKxzvhjOPDTlb8hy5BeWXjXv9NsDx1m7cuJnAUsozIEPBejI_u1R3b5VEZvKGQQFsc_ySikCIdtMqweHJuox6CUNB7KZ0kb4GisnRqOG"/>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </nav>
+            );
+        };
+
+        const MobileNav = () => (
+            <div className="fixed bottom-0 left-0 right-0 md:hidden bg-[#12005E]/95 backdrop-blur-2xl border-t border-white/10 px-6 py-4 flex justify-between items-center z-50">
+                <Link to="/" className="flex flex-col items-center gap-1 text-white/50">
+                    <span className="material-symbols-outlined text-xl">home</span>
+                    <span className="text-[10px] font-medium">Início</span>
+                </Link>
+                <Link to="/" className="flex flex-col items-center gap-1 text-purple-light">
+                    <span className="material-symbols-outlined text-xl">fact_check</span>
+                    <span className="text-[10px] font-bold">Validar</span>
+                </Link>
+                <Link to="/plans" className="flex flex-col items-center gap-1 text-white/50">
+                    <span className="material-symbols-outlined text-xl">emoji_events</span>
+                    <span className="text-[10px] font-medium">Planos</span>
+                </Link>
+                <Link to="/register" className="flex flex-col items-center gap-1 text-white/50">
+                    <span className="material-symbols-outlined text-xl">account_balance_wallet</span>
+                    <span className="text-[10px] font-medium">Conta</span>
+                </Link>
+            </div>
+        );
+
+        const Footer = ({ isWhite = false }) => (
+            <footer className={`mt-20 border-t ${isWhite ? 'border-purple-deep/10 bg-white' : 'border-white/10'} py-12`}>
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-6">
+                    <div className="flex items-center gap-2 opacity-80">
+                        <span className={`material-symbols-outlined text-2xl ${isWhite ? 'text-primary' : 'text-purple-light'}`}>verified</span>
+                        <span className={`text-lg font-bold tracking-tight ${isWhite ? 'text-purple-deep' : 'text-white'}`}>FatoPago</span>
+                    </div>
+                    <p className={`${isWhite ? 'text-purple-deep/60' : 'text-white/40'} text-sm`}>© 2024 FatoPago. Verificando o mundo, um fato de cada vez.</p>
+                    <div className={`flex gap-6 ${isWhite ? 'text-purple-deep/60' : 'text-white/40'} text-sm`}>
+                        <a className="hover:text-primary transition-colors" href="#">Termos</a>
+                        <a className="hover:text-primary transition-colors" href="#">Privacidade</a>
+                        <a className="hover:text-primary transition-colors" href="#">Ajuda</a>
+                    </div>
+                </div>
+            </footer>
+        );
+
+        // --- Screens ---
+
+        const ValidationPanel = () => {
+            const navigate = useNavigate();
+            return (
+                <div className="bg-purple-deep min-h-screen">
+                    <Navbar />
+                    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+                        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
+                            <div>
+                                <h1 className="text-4xl font-extrabold text-white mb-3">Painel de Validação</h1>
+                                <p className="text-purple-100/70 max-w-2xl text-lg">Escolha as notícias abaixo para verificar a veracidade. Ganhe recompensas e suba no ranking a cada acerto.</p>
+                            </div>
+                            <div className="bg-white p-5 rounded-md flex items-center gap-4 shadow-xl border border-white/10">
+                                <div className="bg-primary/10 p-3 rounded-lg">
+                                    <span className="material-symbols-outlined text-primary">newspaper</span>
+                                </div>
+                                <div className="text-slate-900">
+                                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Notícias Selecionadas</p>
+                                    <p className="text-2xl font-bold">4 <span className="text-slate-400 text-sm font-normal">/ 10 plano</span></p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="mb-10 bg-brand-dark p-1 rounded-md shadow-2xl">
+                            <div className="bg-brand-dark border border-primary/30 p-6 rounded-md flex items-start gap-4">
+                                <div className="bg-primary text-white rounded-full p-2 flex items-center justify-center shadow-md shrink-0">
+                                    <span className="material-symbols-outlined text-sm font-bold">check</span>
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-purple-light text-lg">Parabéns! Você validou 8 notícias corretamente.</h3>
+                                    <p className="text-white/80 mt-1">Sua posição no ranking global subiu para <strong className="text-purple-light">#45</strong>. Você recebeu R$ 12,50 extras por acurácia acima de 80%!</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-3 mb-10">
+                            <button className="px-6 py-2.5 bg-white text-primary rounded-full text-sm font-bold shadow-lg hover:bg-purple-100 transition-all">Todas</button>
+                            <button className="px-6 py-2.5 bg-white/10 text-white hover:bg-white/20 rounded-full text-sm font-medium border border-white/20 transition-all">Política</button>
+                            <button className="px-6 py-2.5 bg-white/10 text-white hover:bg-white/20 rounded-full text-sm font-medium border border-white/20 transition-all">Economia</button>
+                            <button className="px-6 py-2.5 bg-white/10 text-white hover:bg-white/20 rounded-full text-sm font-medium border border-white/20 transition-all">Internacional</button>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+                            {/* News Card 1 */}
+                            <div className="news-card-hover bg-white rounded-md overflow-hidden shadow-soft flex flex-col border border-purple-deep/5">
+                                <div className="relative">
+                                    <img alt="Notícia" className="h-48 w-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBtQ7utc3oejp2HiSRQqjzFsOvKDap_hAlw1_ofoOtfpRWpMXSB6O4TOIs20uKnUjMkg11dQ1LJvFYGVmdJCfUCj1_wXxGvlV4ThqlgfhIpNkAQ1o6XREFAk19f36_9Vc2VQFX6ImGPPLylJpsftISQOGxaebEkJDV9WO6yCkq49TJtA3RsBvKAkiPgFhJT1BZzPTQFD4F84fCI_oMygKjew67pRvCZ0dhuSb0WSpyfB4nl6R5rM_O8HeSuHs7Ez0v6T0yqCCghbr0h"/>
+                                    <span className="absolute top-3 left-3 bg-red-600 text-white text-[10px] font-bold px-2 py-1 rounded-md uppercase tracking-wider shadow-sm">Urgente</span>
+                                </div>
+                                <div className="p-6 flex flex-col flex-grow">
+                                    <div className="flex items-center gap-2 mb-4">
+                                        <img alt="Fonte" className="w-5 h-5 rounded-full" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDaqeZuotFV4vhrnQ_kCb53a0oD-DkMsYV_QG5YI3vMAojcJaIu_wjfiQT7OC83BEBvR6W6L5rQnNt9wzd8VyLqnQfJvo1MvK20XOfYAIEBK-Ea2sJN-mFIFNuxaHHaEp48B9yJuAJE9XTw5EQMJH7NiM7zeQhIK15m-ey6e-Z6F9NXhcIkCfBAYLwbS6T1_lSRidN0yH0oFrS11xqP_294pxqrJ15jCQc_9CkHqWK5-1B3BfOfjaRlD6Tn8mrM29u9Ls4Zu7MZltwf"/>
+                                        <span className="text-[10px] font-bold text-slate-400 tracking-widest uppercase">G1 • POLÍTICA</span>
+                                    </div>
+                                    <h3 className="font-bold text-lg mb-6 text-slate-900 leading-snug">Incêndio em resort na Suíça mata dezenas de pessoas em hotel histórico</h3>
+                                    <div className="mt-auto pt-4 flex items-center justify-between border-t border-slate-100">
+                                        <span className="text-[11px] text-slate-400 font-medium">Há 2h</span>
+                                        <button onClick={() => navigate('/details')} className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-md text-sm font-bold hover:bg-purple-deep transition-all shadow-md">
+                                            Selecionar <span className="material-symbols-outlined text-sm">add</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* News Card 2 - Selected */}
+                            <div className="news-card-hover bg-white rounded-md ring-4 ring-purple-light/80 overflow-hidden shadow-soft flex flex-col relative scale-[1.02] z-10">
+                                <div className="relative">
+                                    <img alt="Notícia" className="h-48 w-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD_W6cSUGQJVrU2zAPfhRIEYSsNiHOaHoTfR6CJ4G0C3F7FYH8yUXUhftqKknpZNJH4-mbxaGpYq4TQYkNz2EURPI-_OAcecuU_vIeRXpnsDDQAGFff1ueyNemVCLM8Kx73mbiTvwnSVyCC4SI8wDMLEn_kdYTG6j3Mzo2ox5k54seHCfrYcGfxASiJsJwkT-YL-V1MrR-fMocc0ETLKjwFmcM8bwRgbIQQhZZyAF6P9fFeSIwZqO_TecQe_QyWDyfrkhC0zV9DyJ42"/>
+                                    <div className="absolute inset-0 bg-primary/40 flex items-center justify-center backdrop-blur-[2px]">
+                                        <span className="bg-white text-primary text-xs font-bold px-4 py-2 rounded-full flex items-center gap-2 shadow-xl ring-2 ring-purple-light/50">
+                                            <span className="material-symbols-outlined text-base">check_circle</span> Selecionada
+                                        </span>
+                                    </div>
+                                </div>
+                                <div className="p-6 flex flex-col flex-grow">
+                                    <div className="flex items-center gap-2 mb-4 text-slate-400">
+                                        <img alt="Fonte" className="w-5 h-5 rounded-full" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDQOtthovIAetN5HOy9dkO5vqiLejsadiGQJ2a_YiRU3Qk4KBmXgtLqjbjglLCh6wO9eXjMr0lDBQw-bgoVAvbgWqrXIqrdgFw_16R1ZtFEvll7Jo4qtJkp3Y2JZusKup2wi86h4XJ-dng7t7T7Yt6LTSArj7N0M3BOALgUvjmf_SOjVdbJ5ahiFRkfA3Ke_96Ey1bxWGtZtr2Wvh-TDAhUYDuctPkbCKntxQId9cKSjc7tBb_1u9RFtO2YDcBwrqOL6ITLBnT0LvCR"/>
+                                        <span className="text-[10px] font-bold tracking-widest uppercase">FOLHA • INTERNACIONAL</span>
+                                    </div>
+                                    <h3 className="font-bold text-lg mb-6 text-slate-900 leading-snug">Trump avisa que irá de apoio a manifestantes em meio a protestos violentos</h3>
+                                    <div className="mt-auto pt-4 border-t border-slate-100">
+                                        <div className="flex items-center justify-between mb-4">
+                                            <span className="text-[11px] font-bold text-primary flex items-center gap-1 bg-primary/10 px-2 py-1 rounded">
+                                                <span className="material-symbols-outlined text-xs">schedule</span> 23h 45m
+                                            </span>
+                                            <span className="text-[11px] font-bold text-primary bg-primary/5 px-2 py-1 rounded border border-primary/20">Nível: Médio</span>
+                                        </div>
+                                        <button onClick={() => navigate('/details')} className="w-full bg-primary text-white py-3 rounded-md text-sm font-bold hover:bg-purple-deep transition-all">
+                                            Ver Detalhes
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* News Card 3 */}
+                            <div className="news-card-hover bg-white rounded-md overflow-hidden shadow-soft flex flex-col border border-purple-deep/5">
+                                <div className="relative">
+                                    <img alt="Notícia" className="h-48 w-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDwebYW2jgrYsv2X2lTevIfcgw2vgu72jPNTZTjJfWEcfGXSJZjznzrdwacS61CAt9uYo43i_uIDD76WVAPizBTLn6oKmQ4nKjEODy72oHrGMx1R3FR1SnzjNgTbunaKBLB1JflaUn-OzCFB25mD8QtChM28odqIX_X0LFgGq3jS_IQUXJz6vZHGQ3ykdaCa0tql1LcFJaMQLhs_CLIl1hs_Nslbgmvzr7tMlUG1Hq3m0faKx7YTB2jlBFenyH4d3KxxqUlbjPExI9q"/>
+                                </div>
+                                <div className="p-6 flex flex-col flex-grow">
+                                    <div className="flex items-center gap-2 mb-4 text-slate-400">
+                                        <img alt="Fonte" className="w-5 h-5 rounded-full" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCbE_Orl21_pBc__W8f0TnMChzDQ9PdsUJNWWnCfAyrsnaogaONRoJbcaMoHSqfYKfsu4D4rwMngkvMC_JGiGBDXFXtqVJDy8jz4zpmemGqNuFoaJVAgq_8GvkImPflG2CAtDVR2ARRtIC4a5_aFYgRNdY_AEtXWgUngjcf8iXClZdqegM6oxH4LNfq9ejwwD8NGI_v6tkTymX86scDfRvZbetrwnIuLm4aHGD-mabniewMk6RPROwtqFazEgR1cP-zvcmz2qIC8zQf"/>
+                                        <span className="text-[10px] font-bold tracking-widest uppercase">SPORTV • ESPORTE</span>
+                                    </div>
+                                    <h3 className="font-bold text-lg mb-6 text-slate-900 leading-snug">Luke Littler e Gian van Veen avançam para a final do Mundial de Dardos</h3>
+                                    <div className="mt-auto pt-4 flex items-center justify-between border-t border-slate-100">
+                                        <span className="text-[11px] text-slate-400 font-medium">Há 45 min</span>
+                                        <button onClick={() => navigate('/details')} className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-md text-sm font-bold hover:bg-purple-deep transition-all shadow-md">
+                                            Selecionar <span className="material-symbols-outlined text-sm">add</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Add slot */}
+                            <div className="border-2 border-dashed border-white/20 rounded-md flex flex-col items-center justify-center p-8 text-center bg-white/5 group hover:border-purple-light hover:bg-white/10 transition-all cursor-pointer">
+                                <div className="w-14 h-14 rounded-full bg-primary flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-xl">
+                                    <span className="material-symbols-outlined text-white text-3xl">add_circle</span>
+                                </div>
+                                <h4 className="font-bold text-white mb-1">Espaço disponível</h4>
+                                <p className="text-[11px] text-white/60 max-w-[140px]">Clique em uma notícia para começar a validar</p>
+                            </div>
+                        </div>
+
+                        <div className="mt-20 grid grid-cols-1 md:grid-cols-2 gap-10 items-center border-t border-white/10 pt-12">
+                            <div className="space-y-6">
+                                <div className="flex items-center gap-5">
+                                    <div className="w-14 h-14 rounded-full bg-primary text-white border border-purple-light/20 flex items-center justify-center shadow-lg">
+                                        <span className="material-symbols-outlined text-2xl">share</span>
+                                    </div>
+                                    <div>
+                                        <p className="text-base font-bold text-white">Convide amigos e ganhe bônus!</p>
+                                        <div className="flex items-center gap-4 mt-2">
+                                            <code className="bg-white/10 border border-white/10 px-4 py-2 rounded-md text-xs font-mono text-purple-light">fatopago.com/meulink123</code>
+                                            <button className="bg-primary text-white hover:bg-purple-deep text-xs font-bold flex items-center gap-1 transition-colors px-3 py-2 rounded-md">
+                                                <span className="material-symbols-outlined text-sm">content_copy</span> Copiar
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="bg-white p-7 rounded-md shadow-2xl relative overflow-hidden group border border-purple-deep/5">
+                                <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+                                    <div>
+                                        <h4 className="font-bold text-xl text-slate-900">Regra de Pagamento</h4>
+                                        <p className="text-slate-500 text-sm mt-2 leading-relaxed max-w-xs">
+                                            A transferência é feita em até 24h após a validação final. Todo o saldo fica disponível para saque imediato via PIX.
+                                        </p>
+                                    </div>
+                                    <button className="bg-primary hover:bg-purple-deep text-white px-5 py-3 rounded-md font-bold text-sm transition-all whitespace-nowrap shadow-lg">
+                                        Ver Mais Regras
+                                    </button>
+                                </div>
+                                <div className="absolute right-0 top-0 w-32 h-32 bg-primary/10 blur-3xl rounded-full translate-x-10 -translate-y-10 group-hover:scale-150 transition-transform duration-700"></div>
+                            </div>
+                        </div>
+                    </main>
+                    <Footer isWhite={true} />
+                    <MobileNav />
+                </div>
+            );
+        };
+
+        const RegisterPage = () => {
+            const navigate = useNavigate();
+            return (
+                <div className="bg-purple-deep min-h-screen">
+                    <Navbar variant="white" />
+                    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+                        <div className="grid lg:grid-cols-2 gap-16 items-center">
+                            <div className="space-y-8">
+                                <div>
+                                    <h1 className="text-5xl font-extrabold text-white leading-tight mb-6">Seja recompensado por validar a verdade.</h1>
+                                    <p className="text-purple-100/80 text-xl leading-relaxed">
+                                        Junte-se à maior plataforma de fact-checking colaborativo. Verifique notícias, suba no ranking e receba prêmios por sua acurácia.
+                                    </p>
+                                </div>
+                                <div className="space-y-4">
+                                    {[
+                                        { icon: 'monetization_on', text: 'Ganhe por cada notícia validada corretamente.' },
+                                        { icon: 'trending_up', text: 'Evolua no ranking e desbloqueie bônus.' },
+                                        { icon: 'security', text: 'Sistema seguro de pagamentos via PIX.' }
+                                    ].map((item, i) => (
+                                        <div key={i} className="flex items-center gap-4">
+                                            <div className="bg-white/10 p-2 rounded-full border border-white/20">
+                                                <span className="material-symbols-outlined text-purple-light">{item.icon}</span>
+                                            </div>
+                                            <p className="font-medium text-lg text-white">{item.text}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                                <div className="pt-8 border-t border-white/10 flex items-center gap-6">
+                                    <div>
+                                        <p className="text-3xl font-bold text-white">12k+</p>
+                                        <p className="text-purple-200/60 text-sm">Usuários Ativos</p>
+                                    </div>
+                                    <div className="h-10 w-px bg-white/10"></div>
+                                    <div>
+                                        <p className="text-3xl font-bold text-white">R$ 450k+</p>
+                                        <p className="text-purple-200/60 text-sm">Pagos em Prêmios</p>
+                                    </div>
+                                    <div className="h-10 w-px bg-white/10"></div>
+                                    <div>
+                                        <p className="text-3xl font-bold text-white">98%</p>
+                                        <p className="text-purple-200/60 text-sm">Acurácia Global</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="bg-white rounded-md p-8 shadow-2xl border border-white/10 max-w-md w-full ml-auto">
+                                <div className="mb-8">
+                                    <h2 className="text-2xl font-bold text-slate-900 mb-2">Criar sua conta</h2>
+                                    <p className="text-slate-500 text-sm">Preencha os dados abaixo para começar a faturar.</p>
+                                </div>
+                                <form className="space-y-5" onSubmit={(e) => { e.preventDefault(); navigate('/'); }}>
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-semibold text-slate-700 ml-1">Nome Completo</label>
+                                        <input className="w-full px-4 py-3 rounded-md border border-slate-200 focus:ring-2 focus:ring-primary focus:border-primary outline-none text-slate-900 placeholder:text-slate-400" placeholder="Digite seu nome" type="text" required/>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-semibold text-slate-700 ml-1">E-mail</label>
+                                        <input className="w-full px-4 py-3 rounded-md border border-slate-200 focus:ring-2 focus:ring-primary focus:border-primary outline-none text-slate-900 placeholder:text-slate-400" placeholder="nome@exemplo.com" type="email" required/>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-semibold text-slate-700 ml-1">Senha</label>
+                                        <input className="w-full px-4 py-3 rounded-md border border-slate-200 focus:ring-2 focus:ring-primary focus:border-primary outline-none text-slate-900 placeholder:text-slate-400" placeholder="Mínimo 8 caracteres" type="password" required/>
+                                    </div>
+                                    <div className="flex items-start gap-3 py-2">
+                                        <input className="mt-1 rounded border-slate-300 text-primary focus:ring-primary" type="checkbox" required/>
+                                        <p className="text-xs text-slate-500 leading-relaxed">
+                                            Eu li e concordo com os <a className="text-primary font-bold hover:underline" href="#">Termos de Uso</a> e a <a className="text-primary font-bold hover:underline" href="#">Política de Privacidade</a>.
+                                        </p>
+                                    </div>
+                                    <button className="w-full bg-primary text-white py-4 rounded-md font-bold text-lg hover:opacity-95 transition-all shadow-lg shadow-purple-900/20">
+                                        Criar Conta Grátis
+                                    </button>
+                                    <div className="relative py-4 flex items-center">
+                                        <div className="flex-grow border-t border-slate-100"></div>
+                                        <span className="flex-shrink mx-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Ou cadastre com</span>
+                                        <div className="flex-grow border-t border-slate-100"></div>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <button type="button" className="flex items-center justify-center gap-2 border border-slate-200 py-3 rounded-md hover:bg-slate-50 transition-colors">
+                                            <img alt="Google" className="w-5 h-5" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDipsxCaNPM9YtVgsbmEU2bj-HbhJANXnJ0lRJugoCv0KUDiN71KtUHZx0cuQVqQxdW-LL8E47jAP4igy78TyFLEHAY9nbLNaRhTLALX8lSak1PPZYSyd_nVYrJTad_hgZ52AsIOSQEEIkpByDgazwTIKWf3jYMLpXOxyyTvwjzsy_blgXoqExzcbJNp4qyv5siFr612uWc0_iYajyeBkWZ6s0wqpcJXI4WDgv89r3vWIZxTR5aMhZoSI7OC-fFdbUgITK5t5Wj_ORi"/>
+                                            <span className="text-sm font-bold text-slate-700">Google</span>
+                                        </button>
+                                        <button type="button" className="flex items-center justify-center gap-2 border border-slate-200 py-3 rounded-md hover:bg-slate-50 transition-colors">
+                                            <img alt="Facebook" className="w-5 h-5" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBpEJuIG7uY8rh_H7SIBcOmcGwO9hJj8CFdOxuccULQyQzyejdBC7GviXbhmCpKiQswGebYNYwaW1FQI5qs2FMapHmQnv9zQepAegYHmgXLk8AlX55RzSj9W965rVyllbQi9XaSIud_-3DSjQlCf2rrl7zvyy2iH6xupR5gvYnGUMSzEc2GKuJS3GjpTGkaRgUgIPQ7nTFs3CdQmxwrrTen4xiB7brsC8tIQelOqNTsNFnIRpHD-BzJPvF7Z4NJ6r4EPApFHjoeLCME"/>
+                                            <span className="text-sm font-bold text-slate-700">Facebook</span>
+                                        </button>
+                                    </div>
+                                    <p className="text-center text-sm text-slate-500 pt-4">
+                                        Já tem uma conta? <a className="text-primary font-bold hover:underline" href="#">Faça login</a>
+                                    </p>
+                                </form>
+                            </div>
+                        </div>
+                    </main>
+                    <Footer />
+                </div>
+            );
+        };
+
+        const NewsDetail = () => {
+            const navigate = useNavigate();
+            const [selected, setSelected] = useState(null);
+            
+            return (
+                <div className="bg-purple-deep min-h-screen">
+                    <Navbar variant="white" />
+                    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+                        <div className="mb-8">
+                            <Link to="/" className="inline-flex items-center gap-2 text-white/70 hover:text-white transition-colors mb-6 group">
+                                <span className="material-symbols-outlined text-sm group-hover:-translate-x-1 transition-transform">arrow_back</span>
+                                <span className="text-sm font-medium">Voltar para o Painel</span>
+                            </Link>
+                            <h1 className="text-4xl font-extrabold text-white mb-2">Detalhes da Verificação</h1>
+                            <p className="text-purple-100/70">Analise os fatos, verifique as fontes e emita seu veredito para ganhar recompensas.</p>
+                        </div>
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                            <div className="lg:col-span-2 space-y-8">
+                                <div className="bg-white rounded-md shadow-soft overflow-hidden border border-purple-deep/5">
+                                    <img alt="News" className="w-full h-80 object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD_W6cSUGQJVrU2zAPfhRIEYSsNiHOaHoTfR6CJ4G0C3F7FYH8yUXUhftqKknpZNJH4-mbxaGpYq4TQYkNz2EURPI-_OAcecuU_vIeRXpnsDDQAGFff1ueyNemVCLM8Kx73mbiTvwnSVyCC4SI8wDMLEn_kdYTG6j3Mzo2ox5k54seHCfrYcGfxASiJsJwkT-YL-V1MrR-fMocc0ETLKjwFmcM8bwRgbIQQhZZyAF6P9fFeSIwZqO_TecQe_QyWDyfrkhC0zV9DyJ42"/>
+                                    <div className="p-8">
+                                        <div className="flex items-center gap-3 mb-6">
+                                            <span className="bg-primary/10 text-primary text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest">Internacional</span>
+                                            <span className="text-slate-400 text-sm">•</span>
+                                            <span className="text-slate-500 text-sm">Publicado há 23 horas</span>
+                                        </div>
+                                        <h2 className="text-2xl font-bold text-slate-900 mb-6 leading-tight">Trump avisa que irá de apoio a manifestantes em meio a protestos violentos</h2>
+                                        <div className="prose prose-slate max-w-none text-slate-600 space-y-4">
+                                            <p>Recentemente, diversas postagens em redes sociais afirmam que o ex-presidente Donald Trump teria declarado publicamente seu apoio direto a grupos envolvidos em manifestações violentas em capitais estaduais.</p>
+                                            <p>A notícia sugere que houve uma convocação formal através de uma plataforma de rede social alternativa, incentivando a resistência física contra autoridades locais.</p>
+                                            <p>Como verificador, sua missão é identificar se tal declaração realmente existiu nos canais oficiais ou se trata-se de uma manipulação de falas antigas fora de contexto.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="bg-white rounded-md shadow-soft p-8 border border-purple-deep/5">
+                                    <h3 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-2">
+                                        <span className="material-symbols-outlined text-primary">link</span> Links Relacionados
+                                    </h3>
+                                    <div className="space-y-4">
+                                        {[
+                                            { title: 'Reuters - Fact Check Central', desc: 'Verificação de discursos políticos globais', icon: 'public' },
+                                            { title: 'Transcrição Oficial de Pronunciamento', desc: 'Arquivo oficial de comunicações', icon: 'description' }
+                                        ].map((source, i) => (
+                                            <a key={i} className="flex items-center justify-between p-4 rounded-md border border-slate-100 hover:border-primary/20 hover:bg-primary/5 transition-all group" href="#">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center text-slate-400 group-hover:bg-white group-hover:text-primary transition-colors">
+                                                        <span className="material-symbols-outlined">{source.icon}</span>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-sm font-bold text-slate-900">{source.title}</p>
+                                                        <p className="text-xs text-slate-500">{source.desc}</p>
+                                                    </div>
+                                                </div>
+                                                <span className="material-symbols-outlined text-slate-400 group-hover:text-primary transition-colors">open_in_new</span>
+                                            </a>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="space-y-8">
+                                <div className="bg-white rounded-md shadow-soft p-6 border border-purple-deep/5">
+                                    <div className="flex items-center justify-between mb-8">
+                                        <div>
+                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Recompensa</p>
+                                            <p className="text-2xl font-black text-primary">R$ 4,50</p>
+                                        </div>
+                                        <div className="bg-primary/10 text-primary px-3 py-1 rounded-lg">
+                                            <p className="text-[10px] font-bold uppercase">Nível: Médio</p>
+                                        </div>
+                                    </div>
+                                    <h4 className="font-bold text-slate-900 mb-4">Qual o seu veredito?</h4>
+                                    <div className="space-y-3 mb-8">
+                                        <button 
+                                            onClick={() => setSelected('fato')}
+                                            className={`w-full flex items-center gap-3 p-4 rounded-md border-2 transition-all font-bold ${selected === 'fato' ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-emerald-100 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'}`}>
+                                            <span className="material-symbols-outlined fill-1">check_circle</span> FATO
+                                        </button>
+                                        <button 
+                                            onClick={() => setSelected('fake')}
+                                            className={`w-full flex items-center gap-3 p-4 rounded-md border-2 transition-all font-bold ${selected === 'fake' ? 'border-red-500 bg-red-50 text-red-700' : 'border-red-100 bg-red-50 text-red-700 hover:bg-red-100'}`}>
+                                            <span className="material-symbols-outlined fill-1">cancel</span> FAKE
+                                        </button>
+                                        <button 
+                                            onClick={() => setSelected('impreciso')}
+                                            className={`w-full flex items-center gap-3 p-4 rounded-md border-2 transition-all font-bold ${selected === 'impreciso' ? 'border-amber-500 bg-amber-50 text-amber-700' : 'border-amber-100 bg-amber-50 text-amber-700 hover:bg-amber-100'}`}>
+                                            <span className="material-symbols-outlined fill-1">error</span> IMPRECISO
+                                        </button>
+                                    </div>
+                                    <div className="mb-8">
+                                        <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Justificativa (Opcional)</label>
+                                        <textarea className="w-full rounded-md border-slate-200 text-slate-900 text-sm focus:ring-primary focus:border-primary" placeholder="Por que você escolheu essa opção?" rows="3"></textarea>
+                                    </div>
+                                    <button onClick={() => navigate('/')} className="w-full bg-primary hover:bg-brand-dark text-white py-4 rounded-md font-bold text-lg shadow-lg shadow-primary/20 transition-all">
+                                        Enviar Validação
+                                    </button>
+                                    <p className="text-[10px] text-slate-400 text-center mt-4">Ao enviar, você concorda com nossos termos de verificação.</p>
+                                </div>
+                                <div className="bg-brand-dark rounded-md p-6 border border-white/10">
+                                    <h4 className="text-purple-light font-bold mb-4 flex items-center gap-2">
+                                        <span className="material-symbols-outlined text-sm">info</span> Regras
+                                    </h4>
+                                    <ul className="space-y-3 text-xs text-white/70 leading-relaxed">
+                                        <li className="flex gap-2"><span className="text-purple-light">•</span><span>Validação passa por auditoria automática e manual.</span></li>
+                                        <li className="flex gap-2"><span className="text-purple-light">•</span><span>Tentativas de fraude resultam em banimento.</span></li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </main>
+                    <Footer />
+                </div>
+            );
+        };
+
+        const PlansPage = () => {
+            const navigate = useNavigate();
+            return (
+                <div className="bg-purple-deep min-h-screen">
+                    <Navbar />
+                    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+                        <div className="text-center mb-16">
+                            <h1 className="text-4xl md:text-5xl font-extrabold text-white mb-6">Escolha seu Plano de Validação</h1>
+                            <p className="text-purple-100/70 max-w-2xl mx-auto text-lg">Aumente seu limite diário de notícias e ganhe mais por cada verificação.</p>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
+                            {/* Plan 1 */}
+                            <div className="plan-card-hover bg-white rounded-md p-8 flex flex-col border border-white/10">
+                                <div className="mb-8">
+                                    <span className="text-purple-deep font-bold text-sm uppercase tracking-widest bg-purple-50 px-3 py-1 rounded-full">Iniciante</span>
+                                    <div className="mt-4 flex items-baseline">
+                                        <span className="text-purple-deep text-4xl font-extrabold tracking-tight">R$ 29</span>
+                                        <span className="ml-1 text-slate-400 font-medium">/mês</span>
+                                    </div>
+                                    <p className="mt-4 text-slate-500 text-sm">Ideal para quem está começando agora.</p>
+                                </div>
+                                <ul className="space-y-4 mb-10 flex-grow">
+                                    <li className="flex items-center gap-3 text-slate-600 text-sm"><span className="material-symbols-outlined text-primary text-lg">check_circle</span> 10 notícias por dia</li>
+                                    <li className="flex items-center gap-3 text-slate-600 text-sm"><span className="material-symbols-outlined text-primary text-lg">check_circle</span> R$ 0,50 por validação</li>
+                                </ul>
+                                <button onClick={() => navigate('/')} className="w-full bg-primary hover:bg-brand-dark text-white py-4 rounded-md font-bold text-base transition-all shadow-lg">Selecionar Plano</button>
+                            </div>
+                            {/* Plan 2 */}
+                            <div className="plan-card-hover bg-white rounded-md p-8 flex flex-col border-4 border-purple-light relative scale-105 shadow-2xl z-10">
+                                <div className="absolute -top-5 left-1/2 -translate-x-1/2 bg-purple-light text-purple-deep font-black text-xs uppercase px-4 py-2 rounded-full tracking-widest shadow-xl">Mais Popular</div>
+                                <div className="mb-8">
+                                    <span className="text-purple-deep font-bold text-sm uppercase tracking-widest bg-purple-50 px-3 py-1 rounded-full">Profissional</span>
+                                    <div className="mt-4 flex items-baseline">
+                                        <span className="text-purple-deep text-5xl font-extrabold tracking-tight">R$ 89</span>
+                                        <span className="ml-1 text-slate-400 font-medium">/mês</span>
+                                    </div>
+                                    <p className="mt-4 text-slate-500 text-sm">Para renda extra significativa.</p>
+                                </div>
+                                <ul className="space-y-4 mb-10 flex-grow">
+                                    <li className="flex items-center gap-3 text-slate-600 text-sm"><span className="material-symbols-outlined text-primary text-lg">check_circle</span> 50 notícias por dia</li>
+                                    <li className="flex items-center gap-3 text-slate-600 text-sm font-bold"><span className="material-symbols-outlined text-primary text-lg">check_circle</span> R$ 1,20 por validação</li>
+                                    <li className="flex items-center gap-3 text-slate-600 text-sm"><span className="material-symbols-outlined text-primary text-lg">check_circle</span> Saque PIX imediato</li>
+                                </ul>
+                                <button onClick={() => navigate('/')} className="w-full bg-primary hover:bg-brand-dark text-white py-5 rounded-md font-bold text-lg transition-all shadow-xl ring-4 ring-primary/20">Selecionar Plano</button>
+                            </div>
+                            {/* Plan 3 */}
+                            <div className="plan-card-hover bg-white rounded-md p-8 flex flex-col border border-white/10">
+                                <div className="mb-8">
+                                    <span className="text-purple-deep font-bold text-sm uppercase tracking-widest bg-purple-50 px-3 py-1 rounded-full">Elite Master</span>
+                                    <div className="mt-4 flex items-baseline">
+                                        <span className="text-purple-deep text-4xl font-extrabold tracking-tight">R$ 199</span>
+                                        <span className="ml-1 text-slate-400 font-medium">/mês</span>
+                                    </div>
+                                    <p className="mt-4 text-slate-500 text-sm">O nível máximo de acesso.</p>
+                                </div>
+                                <ul className="space-y-4 mb-10 flex-grow">
+                                    <li className="flex items-center gap-3 text-slate-600 text-sm"><span className="material-symbols-outlined text-primary text-lg">check_circle</span> Notícias ilimitadas</li>
+                                    <li className="flex items-center gap-3 text-slate-600 text-sm font-bold text-primary"><span className="material-symbols-outlined text-primary text-lg">check_circle</span> R$ 2,50 por validação</li>
+                                    <li className="flex items-center gap-3 text-slate-600 text-sm"><span className="material-symbols-outlined text-primary text-lg">check_circle</span> Suporte VIP 24h</li>
+                                </ul>
+                                <button onClick={() => navigate('/')} className="w-full bg-primary hover:bg-brand-dark text-white py-4 rounded-md font-bold text-base transition-all shadow-lg">Selecionar Plano</button>
+                            </div>
+                        </div>
+                    </main>
+                    <Footer />
+                </div>
+            );
+        };
+
+        const App = () => {
+            return (
+                <MemoryRouter initialEntries={['/register']}>
+                    <Routes>
+                        <Route path="/" element={<ValidationPanel />} />
+                        <Route path="/register" element={<RegisterPage />} />
+                        <Route path="/details" element={<NewsDetail />} />
+                        <Route path="/plans" element={<PlansPage />} />
+                    </Routes>
+                </MemoryRouter>
+            );
+        };
+
+        const root = createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
