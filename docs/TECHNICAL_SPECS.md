@@ -1,6 +1,22 @@
 # Especificações Técnicas - FatoPago
 
-## 1. Arquitetura do Sistema
+## 1. Resumo do Modelo de Negócio
+O sistema opera através de **Ciclos de Validação** e **Redes de Afiliação**, com hierarquia geográfica bem definida.
+1. **Afiliados & Influenciadores**: Recebem cotas de links exclusivos para indicar usuários. Competem em ranking próprio baseado em conversão e volume.
+2. **Usuários (Validadores)**: Cadastram-se obrigatoriamente vinculados a uma localidade (País > Estado > Cidade). Ao comprar um ciclo (ex: R$ 5,00), escolhem em qual **nível de ranking** (municipal, estadual ou nacional) desejam competir por prêmios.
+3. **Ecossistema**: Validadores buscam precisão para ganhar recompensas; Afiliados buscam volume para ganhar comissões. As regras são auditáveis e claras.
+
+## 2. Padrões de Qualidade de Código (SOLID)
+Para garantir manutenibilidade e escalabilidade, o código deve respeitar rigorosamente:
+- **Single Responsibility Principle (SRP)**: Cada componente ou função deve ter apenas uma razão para mudar. Componentes de UI não devem conter lógica de negócios complexa; extraia para Hooks ou Services.
+- **Limite de Complexidade**: Arquivos não devem exceder **600 linhas**. Se crescer, refatore e dívida em subcomponentes ou utilitários.
+- **Separação de Preocupações**:
+  - `src/pages`: Lógica de roteamento e composição de página.
+  - `src/components`: Elementos visuais puros e reutilizáveis.
+  - `src/hooks`: Lógica de estado e efeitos colaterais.
+  - `src/lib`: Integrações externas (Supabase, API).
+
+## 3. Arquitetura do Sistema
 **Modelo Adotado: Monolito Modular**
 Embora utilizemos serviços externos (BaaS), a aplicação frontend é construída como um monolito modular na estrutura de pastas, facilitando a manutenção e a escalabilidade inicial sem a complexidade prematura de microserviços.
 
