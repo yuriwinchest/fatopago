@@ -1,10 +1,13 @@
 import { useState } from 'react';
-import { ArrowRight, Eye, EyeOff, CheckCircle, BarChart2 } from 'lucide-react';
+import { ArrowRight, Eye, EyeOff, CheckCircle, BarChart2, AlertCircle, Loader2 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import { supabase } from '../lib/supabase';
 
 const Register = () => {
     const navigate = useNavigate();
     const [showPassword, setShowPassword] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
     const [formData, setFormData] = useState({
         name: '',
         lastname: '',
@@ -25,12 +28,58 @@ const Register = () => {
             ...prev,
             [name]: type === 'checkbox' ? checked : value
         }));
+        if (error) setError(null);
     };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        console.log('Registering:', formData);
-        navigate('/dashboard');
+        setError(null);
+
+        if (!formData.acceptedTerms) {
+            setError("Você precisa aceitar os Termos de Uso.");
+            return;
+        }
+
+        if (!formData.email || !formData.password || !formData.name || !formData.lastname || !formData.state) {
+            setError("Por favor, preencha todos os campos obrigatórios.");
+            return;
+        }
+
+        setLoading(true);
+
+        const signUp = async () => {
+            try {
+                const { data, error: signUpError } = await supabase.auth.signUp({
+                    email: formData.email,
+                    password: formData.password,
+                    options: {
+                        data: {
+                            name: formData.name,
+                            lastname: formData.lastname,
+                            city: formData.city,
+                            state: formData.state,
+                            affiliate_code: formData.affiliateCode || null, // Optional
+                        }
+                    }
+                });
+
+                if (signUpError) throw signUpError;
+
+                if (data.user) {
+                    // Success
+                    // If email confirmation is enabled, we might want to tell them.
+                    // For now, let's navigate to login with a query param or just dashboard if auto-sign-in works (it usually doesn't without confirmation in production).
+                    navigate('/login?registered=true');
+                }
+            } catch (err: any) {
+                console.error(err);
+                setError(err.message || "Erro ao criar conta. Tente novamente.");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        signUp();
     };
 
     return (
@@ -198,9 +247,29 @@ const Register = () => {
                             </label>
                         </div>
 
-                        <button type="submit" className="w-full bg-[#B084FF] hover:bg-[#9D5CFF] text-[#2c1a59] hover:text-white font-bold py-4 rounded-xl transition-all flex items-center justify-center gap-2 group shadow-lg shadow-[#9D5CFF]/20 mt-4">
-                            Criar Minha Conta
-                            <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                        {error && (
+                            <div className="flex items-center gap-2 text-red-400 text-sm bg-red-400/10 p-3 rounded-lg border border-red-400/20">
+                                <AlertCircle className="w-4 h-4 shrink-0" />
+                                <p>{error}</p>
+                            </div>
+                        )}
+
+                        <button
+                            type="submit"
+                            disabled={loading}
+                            className="w-full bg-[#B084FF] hover:bg-[#9D5CFF] disabled:bg-[#B084FF]/50 disabled:cursor-not-allowed text-[#2c1a59] hover:text-white font-bold py-4 rounded-xl transition-all flex items-center justify-center gap-2 group shadow-lg shadow-[#9D5CFF]/20 mt-4"
+                        >
+                            {loading ? (
+                                <>
+                                    <Loader2 className="w-5 h-5 animate-spin" />
+                                    Criando conta...
+                                </>
+                            ) : (
+                                <>
+                                    Criar Minha Conta
+                                    <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                                </>
+                            )}
                         </button>
                     </form>
 
