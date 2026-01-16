@@ -1,14 +1,10 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Force cast to any to silence TS error regarding ImportMeta immediately
-// Sanitize inputs to remove accidental quotes or whitespace
-const rawUrl = (import.meta as any).env.VITE_SUPABASE_URL;
-const rawKey = (import.meta as any).env.VITE_SUPABASE_ANON_KEY;
+// TODO: Revert to env vars after confirming deployment stability
+const supabaseUrl = "https://raxjzfvunjxqbxswuipp.supabase.co";
+const supabaseKey = "sb_publishable_V9cclrMml7jD7GF_8q_r2w_477uS_76";
 
-const supabaseUrl = rawUrl ? String(rawUrl).trim().replace(/["']/g, "") : "";
-const supabaseKey = rawKey ? String(rawKey).trim().replace(/["']/g, "") : "";
-
-console.log("Supabase URL Configured:", supabaseUrl); // Debugging
+console.log("Supabase Client Initialized with Hardcoded Values");
 
 // Safe client initialization
 let supabaseClient;
@@ -28,20 +24,20 @@ if (!supabaseClient) {
         auth: {
             signUp: async () => {
                 console.error("Supabase not configured.");
-                return {
-                    data: { user: null },
-                    error: { message: "Erro de Configuração: Variáveis de ambiente não encontradas." }
+                return { 
+                    data: { user: null }, 
+                    error: { message: "Erro de Configuração: Variáveis de ambiente não encontradas." } 
                 };
             },
             signInWithPassword: async () => {
-                console.error("Supabase not configured.");
-                return {
+                 console.error("Supabase not configured.");
+                 return {
                     data: { user: null },
                     error: { message: "Erro de Configuração: Banco de dados indisponível." }
-                };
+                 };
             },
             signOut: async () => ({ error: null }),
-            onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => { } } } }),
+            onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
             getSession: async () => ({ data: { session: null }, error: null }),
         }
     } as any;
