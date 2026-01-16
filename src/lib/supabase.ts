@@ -1,8 +1,14 @@
 import { createClient } from '@supabase/supabase-js';
 
 // Force cast to any to silence TS error regarding ImportMeta immediately
-const supabaseUrl = (import.meta as any).env.VITE_SUPABASE_URL;
-const supabaseKey = (import.meta as any).env.VITE_SUPABASE_ANON_KEY;
+// Sanitize inputs to remove accidental quotes or whitespace
+const rawUrl = (import.meta as any).env.VITE_SUPABASE_URL;
+const rawKey = (import.meta as any).env.VITE_SUPABASE_ANON_KEY;
+
+const supabaseUrl = rawUrl ? String(rawUrl).trim().replace(/["']/g, "") : "";
+const supabaseKey = rawKey ? String(rawKey).trim().replace(/["']/g, "") : "";
+
+console.log("Supabase URL Configured:", supabaseUrl); // Debugging
 
 // Safe client initialization
 let supabaseClient;
