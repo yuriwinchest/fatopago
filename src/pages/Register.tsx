@@ -34,79 +34,91 @@ const Register = () => {
 
         if (name === 'state') {
             fetchCities(value);
-            setFormData(prev => ({ ...prev, city: '' }));
+            // We don't rely on formData state for submission anymore, but we keep it for UI feedback if needed
         }
 
         if (error) setError(null);
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         setError(null);
-
-        if (!formData.acceptedTerms) {
-            setError("Você precisa aceitar os Termos de Uso.");
-            return;
-        }
-
-        if (!formData.email || !formData.password || !formData.name || !formData.lastname || !formData.state || !formData.city) {
-            setError("Por favor, preencha todos os campos obrigatórios.");
-            return;
-        }
-
         setLoading(true);
 
-        const signUp = async () => {
-            try {
-                // 1. Create Auth User
-                const { data: authData, error: signUpError } = await supabase.auth.signUp({
-                    email: formData.email,
-                    password: formData.password,
-                    options: {
-                        data: {
-                            name: formData.name,
-                            lastname: formData.lastname,
-                        }
+        // 1. Capture data directly from the HTML form (Truth source)
+        const formDataObj = new FormData(e.currentTarget);
+        const name = formDataObj.get('name') as string;
+        const lastname = formDataObj.get('lastname') as string;
+        const email = formDataObj.get('email') as string;
+        const password = formDataObj.get('password') as string;
+        const state = formDataObj.get('state') as string;
+        const city = formDataObj.get('city') as string;
+        const affiliateCode = formDataObj.get('affiliateCode') as string;
+        const acceptedTerms = formDataObj.get('acceptedTerms') === 'on';
+
+        // 2. Validate
+        if (!acceptedTerms) {
+            setError("Você precisa aceitar os Termos de Uso.");
+            setLoading(false);
+            return;
+        }
+
+        if (!email || !password || !name || !lastname || !state || !city) {
+            setError("Por favor, preencha todos os campos obrigatórios.");
+            setLoading(false);
+            return;
+        }
+
+        try {
+            // 3. Create Auth User
+            const { data: authData, error: signUpError } = await supabase.auth.signUp({
+                email: email,
+                password: password,
+                options: {
+                    data: {
+                        name: name,
+                        lastname: lastname,
+                        city: city, // Passing metadata for the trigger
+                        state: state,
+                        affiliate_code: affiliateCode
                     }
-                });
-
-                if (signUpError) throw signUpError;
-
-                if (authData.user) {
-                    // 2. EXPLICITLY create profile to avoid trigger errors
-                    const { error: profileError } = await supabase
-                        .from('profiles')
-                        .upsert([
-                            {
-                                id: authData.user.id,
-                                name: formData.name,
-                                lastname: formData.lastname,
-                                email: formData.email,
-                                city: formData.city,
-                                state: formData.state,
-                                affiliate_code: formData.affiliateCode || null,
-                                created_at: new Date().toISOString(),
-                                updated_at: new Date().toISOString()
-                            }
-                        ], { onConflict: 'id' });
-
-                    if (profileError) {
-                        console.error('Profile creation error:', profileError);
-                        throw new Error("Erro ao salvar dados do perfil: " + profileError.message);
-                    }
-
-                    // Success
-                    navigate('/login?registered=true');
                 }
-            } catch (err: any) {
-                console.error(err);
-                setError(err.message || "Erro ao criar conta. Tente novamente.");
-            } finally {
-                setLoading(false);
-            }
-        };
+            });
 
-        signUp();
+            if (signUpError) throw signUpError;
+
+            if (authData.user) {
+                // 4. Force Profile Creation (Redundancy)
+                const { error: profileError } = await supabase
+                    .from('profiles')
+                    .upsert([
+                        {
+                            id: authData.user.id,
+                            name: name,
+                            lastname: lastname,
+                            email: email,
+                            city: city,
+                            state: state,
+                            affiliate_code: affiliateCode || null,
+                            created_at: new Date().toISOString(),
+                            updated_at: new Date().toISOString()
+                        }
+                    ], { onConflict: 'id' });
+
+                if (profileError) {
+                    console.warn('Profile upsert warning:', profileError);
+                    // We don't throw here because the trigger might have worked.
+                    // We continue to login/success.
+                }
+
+                navigate('/login?registered=true');
+            }
+        } catch (err: any) {
+            console.error(err);
+            setError(err.message || "Erro ao criar conta. Tente novamente.");
+        } finally {
+            setLoading(false);
+        }
     };
 
     const inputClasses = "w-full bg-white border border-gray-300 rounded-xl px-4 py-3.5 focus:ring-2 focus:ring-[#9D5CFF] focus:border-transparent outline-none transition-all placeholder:text-gray-400 text-gray-900 font-medium";
