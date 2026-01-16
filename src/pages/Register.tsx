@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Mail, ArrowRight, User, Eye, EyeOff, CheckCircle, BarChart2 } from 'lucide-react';
+import { ArrowRight, Eye, EyeOff, CheckCircle, BarChart2 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 
 const Register = () => {

@@ -117,3 +117,5 @@ dist
 
 # Temp app
 temp_app/
+.vercel
+.env*.local

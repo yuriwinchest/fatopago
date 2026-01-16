@@ -1,4 +1,4 @@
-import { ArrowRight, CheckCircle, ShieldCheck, Zap, Users, Trophy } from 'lucide-react';
+import { ArrowRight, CheckCircle, ShieldCheck, Zap, Trophy } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const HowItWorks = () => {

@@ -2,7 +2,6 @@
 import { useState } from 'react';
 import {
     Users,
-    MapPin,
     Trophy,
     Wallet,
     BarChart2,
@@ -11,8 +10,7 @@ import {
     Medal,
     Home,
     User,
-    ShieldCheck,
-    CreditCard
+    ShieldCheck
 } from 'lucide-react';
 
 const Dashboard = () => {
@@ -93,8 +91,8 @@ const Dashboard = () => {
                                 key={tab}
                                 onClick={() => setSelectedTab(tab)}
                                 className={`flex-1 py-2 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all ${selectedTab === tab
-                                        ? 'bg-[#8a2ce2] text-white shadow-lg'
-                                        : 'text-slate-500 hover:text-slate-300'
+                                    ? 'bg-[#8a2ce2] text-white shadow-lg'
+                                    : 'text-slate-500 hover:text-slate-300'
                                     }`}
                             >
                                 {tab}
