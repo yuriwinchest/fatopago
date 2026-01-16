@@ -49,26 +49,45 @@ const Register = () => {
 
         const signUp = async () => {
             try {
-                const { data, error: signUpError } = await supabase.auth.signUp({
+                // 1. Create Auth User
+                const { data: authData, error: signUpError } = await supabase.auth.signUp({
                     email: formData.email,
                     password: formData.password,
                     options: {
                         data: {
                             name: formData.name,
                             lastname: formData.lastname,
-                            city: formData.city,
-                            state: formData.state,
-                            affiliate_code: formData.affiliateCode || null, // Optional
                         }
                     }
                 });
 
                 if (signUpError) throw signUpError;
 
-                if (data.user) {
+                if (authData.user) {
+                    // 2. EXPLICITLY create profile to avoid trigger errors
+                    // We use upsert to check if it already exists (from trigger) or insert if not.
+                    const { error: profileError } = await supabase
+                        .from('profiles')
+                        .upsert([
+                            {
+                                id: authData.user.id,
+                                name: formData.name,
+                                lastname: formData.lastname,
+                                email: formData.email,
+                                city: formData.city,
+                                state: formData.state,
+                                affiliate_code: formData.affiliateCode || null,
+                                created_at: new Date().toISOString(),
+                                updated_at: new Date().toISOString()
+                            }
+                        ], { onConflict: 'id' });
+
+                    if (profileError) {
+                        console.error('Profile creation error:', profileError);
+                        throw new Error("Erro ao salvar dados do perfil: " + profileError.message);
+                    }
+
                     // Success
-                    // If email confirmation is enabled, we might want to tell them.
-                    // For now, let's navigate to login with a query param or just dashboard if auto-sign-in works (it usually doesn't without confirmation in production).
                     navigate('/login?registered=true');
                 }
             } catch (err: any) {
@@ -81,6 +100,8 @@ const Register = () => {
 
         signUp();
     };
+
+    const inputClasses = "w-full bg-white border border-gray-300 rounded-xl px-4 py-3.5 focus:ring-2 focus:ring-[#9D5CFF] focus:border-transparent outline-none transition-all placeholder:text-gray-400 text-gray-900 font-medium";
 
     return (
         <div className="min-h-screen flex flex-col lg:flex-row font-sans">
@@ -155,7 +176,7 @@ const Register = () => {
                                     type="text"
                                     name="name"
                                     placeholder="Ex: João"
-                                    className="w-full bg-[#1E1245] border border-[#2D2A55] rounded-xl px-4 py-3.5 focus:ring-2 focus:ring-[#9D5CFF] focus:border-transparent outline-none transition-all placeholder:text-slate-600 text-white font-medium"
+                                    className={inputClasses}
                                     onChange={handleChange}
                                 />
                             </div>
@@ -165,7 +186,7 @@ const Register = () => {
                                     type="text"
                                     name="lastname"
                                     placeholder="Ex: Silva"
-                                    className="w-full bg-[#1E1245] border border-[#2D2A55] rounded-xl px-4 py-3.5 focus:ring-2 focus:ring-[#9D5CFF] focus:border-transparent outline-none transition-all placeholder:text-slate-600 text-white font-medium"
+                                    className={inputClasses}
                                     onChange={handleChange}
                                 />
                             </div>
@@ -177,7 +198,7 @@ const Register = () => {
                                 type="email"
                                 name="email"
                                 placeholder="nome@exemplo.com"
-                                className="w-full bg-[#1E1245] border border-[#2D2A55] rounded-xl px-4 py-3.5 focus:ring-2 focus:ring-[#9D5CFF] focus:border-transparent outline-none transition-all placeholder:text-slate-600 text-white font-medium"
+                                className={inputClasses}
                                 onChange={handleChange}
                             />
                         </div>
@@ -189,13 +210,13 @@ const Register = () => {
                                     type={showPassword ? "text" : "password"}
                                     name="password"
                                     placeholder="Mínimo 8 caracteres"
-                                    className="w-full bg-[#1E1245] border border-[#2D2A55] rounded-xl px-4 py-3.5 pr-10 focus:ring-2 focus:ring-[#9D5CFF] focus:border-transparent outline-none transition-all placeholder:text-slate-600 text-white font-medium"
+                                    className={`${inputClasses} pr-10`}
                                     onChange={handleChange}
                                 />
                                 <button
                                     type="button"
                                     onClick={() => setShowPassword(!showPassword)}
-                                    className="absolute right-3 top-3.5 text-slate-500 hover:text-white transition-colors"
+                                    className="absolute right-3 top-3.5 text-gray-500 hover:text-purple-600 transition-colors"
                                 >
                                     {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                                 </button>
@@ -208,7 +229,7 @@ const Register = () => {
                                 <label className="text-sm font-semibold text-slate-300 ml-1">Estado</label>
                                 <select
                                     name="state"
-                                    className="w-full bg-[#1E1245] border border-[#2D2A55] rounded-xl px-4 py-3.5 focus:ring-2 focus:ring-[#9D5CFF] focus:border-transparent outline-none transition-all text-white font-medium appearance-none"
+                                    className={inputClasses}
                                     onChange={handleChange}
                                     defaultValue=""
                                 >
@@ -225,7 +246,7 @@ const Register = () => {
                                     type="text"
                                     name="city"
                                     placeholder="Cidade"
-                                    className="w-full bg-[#1E1245] border border-[#2D2A55] rounded-xl px-4 py-3.5 focus:ring-2 focus:ring-[#9D5CFF] focus:border-transparent outline-none transition-all placeholder:text-slate-600 text-white font-medium"
+                                    className={inputClasses}
                                     onChange={handleChange}
                                 />
                             </div>
