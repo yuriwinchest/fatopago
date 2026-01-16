@@ -46,7 +46,8 @@ const Register = () => {
         setLoading(true);
 
         // 1. Capture data directly from the HTML form (Truth source)
-        const formDataObj = new FormData(e.currentTarget);
+        const form = e.currentTarget;
+        const formDataObj = new FormData(form);
         const name = formDataObj.get('name') as string;
         const lastname = formDataObj.get('lastname') as string;
         const email = formDataObj.get('email') as string;
@@ -54,7 +55,12 @@ const Register = () => {
         const state = formDataObj.get('state') as string;
         const city = formDataObj.get('city') as string;
         const affiliateCode = formDataObj.get('affiliateCode') as string;
-        const acceptedTerms = formDataObj.get('acceptedTerms') === 'on';
+
+        // Handle checkbox correctly
+        const termsCheckbox = form.querySelector('#terms') as HTMLInputElement;
+        const acceptedTerms = termsCheckbox?.checked;
+
+        console.log("Tentando cadastro para:", email);
 
         // 2. Validate
         if (!acceptedTerms) {
