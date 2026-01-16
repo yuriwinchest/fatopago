@@ -4,13 +4,15 @@
 
 @layer base {
   :root {
-    --background: 270 50% 10%; /* #12005E - brand-dark */
+    --background: 270 50% 10%;
+    /* #12005E - brand-dark */
     --foreground: 210 40% 98%;
     --card: 0 0% 100%;
     --card-foreground: 222.2 84% 4.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
-    --primary: 271 76% 53%; /* #8a2ce2 - primary */
+    --primary: 271 76% 53%;
+    /* #8a2ce2 - primary */
     --primary-foreground: 210 40% 98%;
     --secondary: 270 50% 96%;
     --secondary-foreground: 222.2 47.4% 11.2%;
@@ -25,9 +27,10 @@
     --ring: 271 76% 53%;
     --radius: 0.75rem;
   }
- 
+
   .dark {
-    --background: 270 50% 10%; /* #12005E */
+    --background: 270 50% 10%;
+    /* #12005E */
     --foreground: 210 40% 98%;
     --card: 222.2 84% 4.9%;
     --card-foreground: 210 40% 98%;
@@ -53,8 +56,18 @@
   * {
     @apply border-border;
   }
+
+  html,
+  body {
+    @apply h-full w-full overflow-x-hidden;
+    overscroll-behavior: none;
+    /* Prevent pull-to-refresh on mobile */
+  }
+
   body {
     @apply bg-background text-foreground antialiased;
     font-feature-settings: "rlig" 1, "calt" 1;
+    -webkit-tap-highlight-color: transparent;
+    /* Remove gray tap highlight on mobile */
   }
 }
