@@ -1,66 +1,78 @@
 # Especificações Técnicas - FatoPago
 
-## 1. Arquitetura Geral
-- **Frontend**: Single Page Application (SPA).
-- **Backend / BaaS**: Supabase (PostgreSQL, Auth, Edge Functions).
-- **Hospedagem Frontend**: Vercel ou Netlify (ou VPS própria com Nginx).
+## 1. Arquitetura do Sistema
+**Modelo Adotado: Monolito Modular**
+Embora utilizemos serviços externos (BaaS), a aplicação frontend é construída como um monolito modular na estrutura de pastas, facilitando a manutenção e a escalabilidade inicial sem a complexidade prematura de microserviços.
 
-## 2. Stack Tecnológico Frontend
+### Decisões Arquiteturais:
+- **Frontend**: Single Page Application (SPA) construída com React e Vite.
+- **Backend / BaaS**: Supabase. Atua como o "backend" unificado, fornecendo Banco de Dados, Autenticação e Edge Functions.
+- **Microserviços?**: Não por enquanto. A complexidade de microserviços não se justifica no estágio atual. Funcionalidades específicas (como processamento de pagamentos complexos) podem ser movidas para **Edge Functions** (Serverless) no futuro, mantendo o core enxuto.
+- **Estilização**: **Tailwind CSS** puro. Evitar arquivos `.css` isolados ou CSS-in-JS (Styled Components) para manter o padrão utilitário e performance.
+
+## 2. Padrões de Código e Segurança
+
+### Identificadores (IDs)
+- **Tipo Obrigatório**: **UUID v4** (Universally Unique Identifier).
+- **Justificativa**: Segurança e escalabilidade. IDs sequenciais (1, 2, 3...) expõem o volume de dados do negócio e são vulneráveis a ataques de enumeração.
+- **Implementação**: O banco de dados (PostgreSQL) deve gerar UUIDs automaticamente (`gen_random_uuid()`) para todas as chaves primárias.
+
+### Segurança de Dados
+- **RLS (Row Level Security)**: Obrigatório em TODAS as tabelas públicas. Nenhum dado deve ser acessível sem uma política explícita de `SELECT`, `INSERT` ou `UPDATE` vinculada ao usuário autenticado (`auth.uid()`).
+
+## 3. Stack Tecnológico Frontend
 - **Framework**: React 18+
 - **Build Tool**: Vite
-- **Linguagem**: TypeScript
-- **Estilização**: Tailwind CSS (Utility-first) + CSS Modules (para customizações específicas "Glassmorphism").
+- **Linguagem**: TypeScript (Strict Mode)
+- **Estilização**: Tailwind CSS v3.
 - **Ícones**: Lucide React.
 - **Roteamento**: React Router DOM.
-- **Gerenciamento de Estado**: React Hooks (useState, useContext) ou Zustand (se complexidade aumentar).
+- **Gerenciamento de Estado**: React Hooks (Nativo) e Context API para estados globais simples (Auth).
 
-## 3. Banco de Dados (Supabase PostgreSQL)
+## 4. Estrutura do Banco de Dados (Supabase PostgreSQL)
 
 ### Tabela: `profiles`
-- `id` (uuid, PK, ref auth.users)
+- `id` (uuid, PK, references auth.users) - **Segurança Crítica**
 - `name` (text)
 - `lastname` (text)
 - `city` (text)
 - `state` (varchar 2)
 - `affiliate_code` (text, unique)
-- `referred_by` (uuid, FK self)
+- `referred_by` (uuid, FK profiles.id)
 - `reputation_score` (float)
 - `current_balance` (decimal)
 - `is_active` (bool)
 
 ### Tabela: `cycles`
-- `id` (uuid, PK)
-- `name` (text) - e.g., "Ciclo Iniciante"
+- `id` (uuid, PK, default gen_random_uuid())
+- `name` (text)
 - `price` (decimal)
-- `validations_count` (int) - Quantas validações permitidas
+- `validations_count` (int)
 - `payout_per_validation` (decimal)
 
 ### Tabela: `user_cycles`
-- `id` (uuid, PK)
-- `user_id` (uuid, FK profiles)
-- `cycle_id` (uuid, FK cycles)
+- `id` (uuid, PK, default gen_random_uuid())
+- `user_id` (uuid, FK profiles.id)
+- `cycle_id` (uuid, FK cycles.id)
 - `progress` (int)
 - `status` (enum: active, completed, expired)
 
 ### Tabela: `news_tasks`
-- `id` (uuid, PK)
-- `content` (text/json) - Título, resumo, link original
+- `id` (uuid, PK, default gen_random_uuid())
+- `content` (jsonb) - Flexibilidade para armazenar metadados da notícia.
 - `consensus_reached` (bool)
 - `correct_verdict` (bool/null)
 
 ### Tabela: `validations`
-- `id` (uuid, PK)
-- `task_id` (uuid, FK news_tasks)
-- `user_id` (uuid, FK profiles)
-- `verdict` (bool) - Verdadeiro/Falso
+- `id` (uuid, PK, default gen_random_uuid())
+- `task_id` (uuid, FK news_tasks.id)
+- `user_id` (uuid, FK profiles.id)
+- `verdict` (bool)
 - `created_at` (timestamp)
 
-## 4. Integrações
-- **Pagamentos (Entrada)**: Gateway de pagamento para compra de ciclos (ex: Stripe, Mercado Pago ou API Pix direta).
-- **Pagamentos (Saída)**: API de PIX para payouts aos usuários.
+## 5. Integrações
+- **Pagamentos**: Gateway externo (Stripe/Pix) via Webhooks para atualizar o saldo/ciclos no Supabase.
 
-## 5. Requisitos Não-Funcionais
-- **Performance**: Carregamento inicial < 2s. Uso de code-splitting.
-- **Responsividade**: Mobile-first obrigatório. Layout deve funcionar perfeitamente em telas 320px+.
-- **Segurança**: RLS (Row Level Security) no Supabase para proteger dados dos usuários. Validação de inputs no frontend e backend.
-- **UX/UI**: Uso de animações sutis (transições), feedback visual imediato e estética "Dark Premium" (Roxo/Preto).
+## 6. Requisitos Não-Funcionais
+- **Performance**: Mobile-first.
+- **Segurança**: Validação de inputs no client-side (Zod) e server-side (Constraint Checks no banco).
