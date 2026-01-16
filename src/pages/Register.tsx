@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ArrowRight, Eye, EyeOff, CheckCircle, BarChart2, AlertCircle, Loader2 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
+import { useLocation } from '../hooks/useLocation';
 
 const Register = () => {
     const navigate = useNavigate();
@@ -19,6 +20,8 @@ const Register = () => {
         acceptedTerms: false
     });
 
+    const { states, cities, loadingCities, fetchCities } = useLocation();
+
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
         const checked = (e.target as HTMLInputElement).checked;
@@ -28,6 +31,12 @@ const Register = () => {
             ...prev,
             [name]: type === 'checkbox' ? checked : value
         }));
+
+        if (name === 'state') {
+            fetchCities(value);
+            setFormData(prev => ({ ...prev, city: '' }));
+        }
+
         if (error) setError(null);
     };
 
@@ -40,7 +49,7 @@ const Register = () => {
             return;
         }
 
-        if (!formData.email || !formData.password || !formData.name || !formData.lastname || !formData.state) {
+        if (!formData.email || !formData.password || !formData.name || !formData.lastname || !formData.state || !formData.city) {
             setError("Por favor, preencha todos os campos obrigatórios.");
             return;
         }
@@ -65,7 +74,6 @@ const Register = () => {
 
                 if (authData.user) {
                     // 2. EXPLICITLY create profile to avoid trigger errors
-                    // We use upsert to check if it already exists (from trigger) or insert if not.
                     const { error: profileError } = await supabase
                         .from('profiles')
                         .upsert([
@@ -223,7 +231,7 @@ const Register = () => {
                             </div>
                         </div>
 
-                        {/* Additional Fields for Business Logic */}
+                        {/* Location Fields - Integrated with IBGE */}
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-1.5">
                                 <label className="text-sm font-semibold text-slate-300 ml-1">Estado</label>
@@ -231,25 +239,42 @@ const Register = () => {
                                     name="state"
                                     className={inputClasses}
                                     onChange={handleChange}
-                                    defaultValue=""
+                                    value={formData.state}
                                 >
-                                    <option value="" disabled>Estado</option>
-                                    <option value="SP">SP</option>
-                                    <option value="RJ">RJ</option>
-                                    <option value="MG">MG</option>
-                                    {/* Simplified for design match */}
+                                    <option value="" disabled>Selecione</option>
+                                    {states.map((uf) => (
+                                        <option key={uf.id} value={uf.sigla}>{uf.sigla}</option>
+                                    ))}
                                 </select>
                             </div>
                             <div className="space-y-1.5">
                                 <label className="text-sm font-semibold text-slate-300 ml-1">Cidade</label>
-                                <input
-                                    type="text"
+                                <select
                                     name="city"
-                                    placeholder="Cidade"
                                     className={inputClasses}
                                     onChange={handleChange}
-                                />
+                                    value={formData.city}
+                                    disabled={!formData.state || loadingCities}
+                                >
+                                    <option value="" disabled>
+                                        {loadingCities ? "Carregando..." : (!formData.state ? "Selecione Estado" : "Selecione")}
+                                    </option>
+                                    {cities.map((city) => (
+                                        <option key={city.id} value={city.nome}>{city.nome}</option>
+                                    ))}
+                                </select>
                             </div>
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <label className="text-sm font-semibold text-slate-300 ml-1">Código de Indicação (Opcional)</label>
+                            <input
+                                type="text"
+                                name="affiliateCode"
+                                placeholder="Código do influenciador"
+                                className={inputClasses}
+                                onChange={handleChange}
+                            />
                         </div>
 
                         <div className="flex items-start gap-3 py-2">
