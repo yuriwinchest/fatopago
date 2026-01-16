@@ -1,5 +1,4 @@
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
     Users,
     Trophy,
@@ -10,11 +9,96 @@ import {
     Medal,
     Home,
     User,
-    ShieldCheck
+    ShieldCheck,
+    Loader2,
+    Briefcase
 } from 'lucide-react';
+import { supabase } from '../lib/supabase';
+import { useNavigate } from 'react-router-dom';
+
+interface UserProfile {
+    name: string;
+    lastname: string;
+    current_balance: number;
+    reputation_score: number;
+    city: string;
+    state: string;
+    affiliate_code: string;
+}
+
+interface NewsTask {
+    id: string;
+    content: {
+        title: string;
+        description: string;
+        reward: number;
+        category: string;
+        source: string;
+        difficulty: string;
+    };
+    created_at: string;
+}
 
 const Dashboard = () => {
+    const navigate = useNavigate();
     const [selectedTab, setSelectedTab] = useState<'cidade' | 'estado' | 'brasil'>('cidade');
+    const [loading, setLoading] = useState(true);
+    const [profile, setProfile] = useState<UserProfile | null>(null);
+    const [tasks, setTasks] = useState<NewsTask[]>([]);
+
+    useEffect(() => {
+        const loadDashboard = async () => {
+            try {
+                // 1. Get Current User
+                const { data: { user } } = await supabase.auth.getUser();
+                if (!user) {
+                    navigate('/login');
+                    return;
+                }
+
+                // 2. Fetch Profile
+                const { data: profileData, error: profileError } = await supabase
+                    .from('profiles')
+                    .select('*')
+                    .eq('id', user.id)
+                    .single();
+
+                if (profileError) throw profileError;
+                setProfile(profileData);
+
+                // 3. Fetch Tasks (Pending Validations)
+                // In a real app, we would filter tasks not yet validated by this user.
+                const { data: tasksData, error: tasksError } = await supabase
+                    .from('news_tasks')
+                    .select('*')
+                    .limit(5)
+                    .order('created_at', { ascending: false });
+
+                if (tasksError) throw tasksError;
+                setTasks(tasksData || []);
+
+            } catch (error) {
+                console.error('Error loading dashboard:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadDashboard();
+    }, [navigate]);
+
+    // Helpers
+    const formatCurrency = (val: number) => {
+        return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
+    };
+
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-[#0F0529] flex items-center justify-center text-white">
+                <Loader2 className="w-8 h-8 animate-spin text-purple-500" />
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-brand-dark text-white font-sans pb-24">
@@ -29,10 +113,10 @@ const Dashboard = () => {
                 <div className="flex items-center gap-3">
                     <div className="text-right hidden sm:block">
                         <p className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider">Bem-vindo</p>
-                        <p className="text-sm font-bold">João Pereira</p>
+                        <p className="text-sm font-bold">{profile?.name} {profile?.lastname}</p>
                     </div>
-                    <div className="w-10 h-10 rounded-full border-2 border-white/20 overflow-hidden">
-                        <img src="https://i.pravatar.cc/150?u=a042581f4e29026704d" alt="Profile" className="w-full h-full object-cover" />
+                    <div className="w-10 h-10 rounded-full border-2 border-green-500/50 overflow-hidden bg-purple-900 flex items-center justify-center">
+                        <span className="font-bold text-xs">{profile?.name?.charAt(0)}{profile?.lastname?.charAt(0)}</span>
                     </div>
                 </div>
             </div>
@@ -45,7 +129,7 @@ const Dashboard = () => {
                         <div className="flex justify-between items-start mb-2">
                             <div>
                                 <p className="text-[10px] font-bold text-purple-200 uppercase tracking-widest mb-1">Saldo Disponível</p>
-                                <h2 className="text-4xl font-extrabold text-white">R$ 67,50</h2>
+                                <h2 className="text-4xl font-extrabold text-white">{formatCurrency(profile?.current_balance || 0)}</h2>
                             </div>
                             <button className="bg-white text-purple-900 px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 shadow-lg hover:scale-105 transition-transform">
                                 Sacar Saldo <Wallet className="w-3 h-3" />
@@ -54,18 +138,17 @@ const Dashboard = () => {
 
                         <div className="inline-flex items-center gap-2 bg-white/20 px-3 py-1.5 rounded-lg mb-6 backdrop-blur-sm border border-white/10">
                             <ShieldCheck className="w-3 h-3 text-purple-200" />
-                            <span className="text-[10px] font-bold text-white">A liberar: R$ 14,00 em análise</span>
+                            <span className="text-[10px] font-bold text-white">Nível: {profile?.reputation_score ? (profile.reputation_score > 500 ? 'Diamante' : (profile.reputation_score > 100 ? 'Ouro' : 'Iniciante')) : 'Iniciante'}</span>
                         </div>
 
                         <div>
                             <div className="flex justify-between text-[10px] font-bold text-purple-200 mb-2">
-                                <span>Progresso da Meta Diária</span>
-                                <span className="text-white">80%</span>
+                                <span>Progresso para Próximo Nível</span>
+                                <span className="text-white">{(profile?.reputation_score || 0) % 100}%</span>
                             </div>
                             <div className="h-2 w-full bg-black/20 rounded-full overflow-hidden">
-                                <div className="h-full bg-white w-[80%] rounded-full shadow-[0_0_10px_rgba(255,255,255,0.5)]" />
+                                <div className="h-full bg-white rounded-full shadow-[0_0_10px_rgba(255,255,255,0.5)]" style={{ width: `${(profile?.reputation_score || 0) % 100}%` }} />
                             </div>
-                            <p className="text-[10px] text-purple-200 mt-2">Faltam apenas R$ 12,50 para o bônus!</p>
                         </div>
                     </div>
 
@@ -74,76 +157,40 @@ const Dashboard = () => {
                     <div className="absolute bottom-0 left-0 w-24 h-24 bg-black/10 rounded-full blur-2xl -ml-5 -mb-5" />
                 </div>
 
-                {/* Global Ranking Section */}
+                {/* Available Tasks List (NEW) */}
                 <div>
-                    <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-2">
-                            <BarChart2 className="w-5 h-5 text-purple-400" />
-                            <h3 className="font-bold text-lg">Ranking Global</h3>
-                        </div>
-                        <button className="text-[10px] font-bold text-purple-400 hover:text-white transition-colors">Ver detalhes</button>
+                    <div className="flex items-center gap-2 mb-4">
+                        <Briefcase className="w-5 h-5 text-purple-400" />
+                        <h3 className="font-bold text-lg">Tarefas Disponíveis</h3>
                     </div>
 
-                    {/* Tabs */}
-                    <div className="bg-[#1A1040] p-1 rounded-xl flex mb-4 border border-white/5">
-                        {(['cidade', 'estado', 'brasil'] as const).map((tab) => (
-                            <button
-                                key={tab}
-                                onClick={() => setSelectedTab(tab)}
-                                className={`flex-1 py-2 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all ${selectedTab === tab
-                                    ? 'bg-[#8a2ce2] text-white shadow-lg'
-                                    : 'text-slate-500 hover:text-slate-300'
-                                    }`}
-                            >
-                                {tab}
-                            </button>
-                        ))}
-                    </div>
-
-                    {/* Ranking List */}
                     <div className="space-y-3">
-                        {/* Item 1 */}
-                        <div className="bg-[#1A1040] p-4 rounded-2xl flex items-center justify-between border border-white/5 relative overflow-hidden group">
-                            <div className="flex items-center gap-4 relative z-10">
-                                <div className="w-6 h-6 rounded-full bg-purple-500/20 text-purple-300 flex items-center justify-center text-xs font-bold">1</div>
-                                <div className="w-10 h-10 rounded-xl bg-purple-900 flex items-center justify-center text-xs font-bold text-purple-200 uppercase border border-purple-500/30">SP</div>
-                                <div>
-                                    <p className="font-bold text-sm">São Paulo</p>
-                                    <p className="text-[10px] text-slate-400">103 notícias validadas</p>
-                                </div>
+                        {tasks.length === 0 ? (
+                            <div className="bg-[#1A1040] p-6 rounded-2xl border border-white/5 text-center">
+                                <p className="text-slate-400 text-sm">Nenhuma tarefa disponível no momento.</p>
                             </div>
-                            <Trophy className="w-4 h-4 text-purple-400" />
-                        </div>
-
-                        {/* Item 2 */}
-                        <div className="bg-[#1A1040] p-4 rounded-2xl flex items-center justify-between border border-white/5">
-                            <div className="flex items-center gap-4">
-                                <div className="w-6 h-6 rounded-full bg-slate-700/50 text-slate-400 flex items-center justify-center text-xs font-bold">2</div>
-                                <div className="w-10 h-10 rounded-xl bg-[#2D2A55] flex items-center justify-center text-xs font-bold text-slate-300 uppercase border border-slate-600/30">BS</div>
-                                <div>
-                                    <p className="font-bold text-sm">Brasília</p>
-                                    <p className="text-[10px] text-slate-400">98 notícias validadas</p>
-                                </div>
-                            </div>
-                            <Trophy className="w-4 h-4 text-slate-600" />
-                        </div>
-
-                        {/* User Ranking Card (Floating) */}
-                        <div className="bg-gradient-to-r from-[#2D2A55] to-[#1A1040] p-4 rounded-2xl flex items-center justify-between border border-purple-500/30 shadow-lg relative mt-6 transform scale-105">
-                            <div className="absolute -top-3 left-4 bg-purple-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full uppercase">Sua Posição</div>
-                            <div className="flex items-center gap-4">
-                                <div className="w-6 h-6 rounded-full bg-white/10 text-white flex items-center justify-center text-xs font-bold">4</div>
-                                <div className="w-10 h-10 rounded-xl bg-white text-purple-900 flex items-center justify-center text-xs font-extrabold uppercase shadow-lg">JO</div>
-                                <div>
-                                    <div className="flex items-center gap-2">
-                                        <p className="font-bold text-sm">João Pereira</p>
-                                        <span className="bg-white/10 text-[9px] px-1.5 rounded text-white font-medium">VOCÊ</span>
+                        ) : (
+                            tasks.map(task => (
+                                <div key={task.id} className="bg-[#1A1040] p-4 rounded-2xl flex items-center justify-between border border-white/5 hover:border-purple-500/50 transition-colors group cursor-pointer">
+                                    <div className="flex-1 mr-4">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase ${task.content.difficulty === 'easy' ? 'bg-green-500/20 text-green-400' : (task.content.difficulty === 'medium' ? 'bg-yellow-500/20 text-yellow-400' : 'bg-red-500/20 text-red-400')}`}>
+                                                {task.content.difficulty === 'easy' ? 'Fácil' : (task.content.difficulty === 'medium' ? 'Médio' : 'Difícil')}
+                                            </span>
+                                            <span className="text-[9px] text-slate-500 uppercase font-bold">{task.content.category}</span>
+                                        </div>
+                                        <h4 className="font-bold text-sm text-white leading-snug group-hover:text-purple-300 transition-colors">{task.content.title}</h4>
+                                        <p className="text-xs text-slate-400 mt-1 line-clamp-1">{task.content.description}</p>
                                     </div>
-                                    <p className="text-[10px] text-purple-200">39 notícias validadas</p>
+                                    <div className="flex flex-col items-end gap-2">
+                                        <span className="text-sm font-extrabold text-[#00E676]">{formatCurrency(task.content.reward)}</span>
+                                        <button className="bg-purple-600 hover:bg-purple-500 text-white p-2 rounded-lg transition-colors">
+                                            <ArrowRight className="w-4 h-4" />
+                                        </button>
+                                    </div>
                                 </div>
-                            </div>
-                            <Medal className="w-4 h-4 text-purple-400" />
-                        </div>
+                            ))
+                        )}
                     </div>
                 </div>
 
@@ -159,8 +206,8 @@ const Dashboard = () => {
                                 <CheckCircle className="w-5 h-5" />
                             </div>
                             <div>
-                                <h4 className="text-2xl font-bold text-white leading-none">81%</h4>
-                                <p className="text-[9px] font-bold text-slate-500 uppercase tracking-wider mt-1">Taxa de Precisão</p>
+                                <h4 className="text-2xl font-bold text-white leading-none">100%</h4>
+                                <p className="text-[9px] font-bold text-slate-500 uppercase tracking-wider mt-1">Precisão</p>
                             </div>
                         </div>
 
@@ -169,8 +216,8 @@ const Dashboard = () => {
                                 <Trophy className="w-5 h-5" />
                             </div>
                             <div>
-                                <h4 className="text-2xl font-bold text-white leading-none">57</h4>
-                                <p className="text-[9px] font-bold text-slate-500 uppercase tracking-wider mt-1">Pontos Totais</p>
+                                <h4 className="text-2xl font-bold text-white leading-none">{profile?.reputation_score || 0}</h4>
+                                <p className="text-[9px] font-bold text-slate-500 uppercase tracking-wider mt-1">Pontos XP</p>
                             </div>
                         </div>
                     </div>
@@ -187,7 +234,7 @@ const Dashboard = () => {
                             <p className="text-[10px] text-slate-400 mt-1 max-w-[200px] leading-relaxed">Ganhe <span className="text-purple-300 font-bold">R$ 10,00</span> por cada novo validador convidado.</p>
                         </div>
                         <button className="ml-auto bg-gradient-to-r from-[#BB86FC] to-[#8a2ce2] text-white text-[10px] font-bold px-4 py-2 rounded-lg shadow-lg hover:opacity-90 transition-opacity">
-                            CONVIDAR AGORA
+                            CONVIDAR
                         </button>
                     </div>
                 </div>
@@ -196,27 +243,15 @@ const Dashboard = () => {
                 <div className="text-center">
                     <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-3">Seu Link Exclusivo</p>
                     <div className="bg-[#1A1040] p-2 rounded-xl border border-white/5 flex items-center justify-between pl-4">
-                        <span className="text-xs text-slate-300 font-mono truncate mr-2">fatopago.com/convite/joao772</span>
+                        <span className="text-xs text-slate-300 font-mono truncate mr-2">fatopago.com/convite/{profile?.affiliate_code || 'gerar'}</span>
                         <button className="bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 px-4 py-2 rounded-lg text-[10px] font-bold flex items-center gap-2 transition-colors">
                             COPIAR <Copy className="w-3 h-3" />
                         </button>
                     </div>
                 </div>
 
-                {/* Info Footer */}
-                <div className="bg-[#1A1040] rounded-3xl p-6 border border-white/5 mb-8">
-                    <div className="flex items-center gap-2 mb-3">
-                        <ShieldCheck className="w-4 h-4 text-purple-400" />
-                        <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Informações de Saque</span>
-                    </div>
-                    <p className="text-xs text-slate-400 leading-relaxed mb-4">
-                        As transferências são processadas em até <strong className="text-white">24 horas úteis</strong>. A validação das notícias passa por auditoria antes do crédito ser liberado.
-                    </p>
-                    <div className="flex gap-2">
-                        <span className="text-[9px] font-bold text-slate-500 bg-black/20 px-2 py-1 rounded border border-white/5">PIX INSTANTÂNEO</span>
-                        <span className="text-[9px] font-bold text-slate-500 bg-black/20 px-2 py-1 rounded border border-white/5">MÍNIMO R$ 50,00</span>
-                    </div>
-                </div>
+                {/* Info Footer will follow same pattern */}
+                <div className="pb-8"></div>
             </div>
 
             {/* Bottom Nav */}
@@ -225,20 +260,12 @@ const Dashboard = () => {
                     <Home className="w-5 h-5 group-hover:-translate-y-1 transition-transform" />
                     <span className="text-[9px] font-bold">INÍCIO</span>
                 </button>
-                <button className="flex flex-col items-center gap-1 text-slate-500 hover:text-white transition-colors group">
-                    <BarChart2 className="w-5 h-5 group-hover:-translate-y-1 transition-transform" />
-                    <span className="text-[9px] font-bold">RANKING</span>
-                </button>
                 <div className="relative -top-5">
                     <button className="w-14 h-14 bg-[#8a2ce2] rounded-2xl flex flex-col items-center justify-center shadow-[0_0_20px_rgba(138,44,226,0.5)] border-4 border-[#0F0826] hover:scale-105 transition-transform">
                         <CheckCircle className="w-6 h-6 text-white fill-current" />
                     </button>
                     <span className="absolute -bottom-4 left-1/2 -translate-x-1/2 text-[9px] font-bold text-purple-300">VALIDAR</span>
                 </div>
-                <button className="flex flex-col items-center gap-1 text-slate-500 hover:text-white transition-colors group">
-                    <Wallet className="w-5 h-5 group-hover:-translate-y-1 transition-transform" />
-                    <span className="text-[9px] font-bold">SALDO</span>
-                </button>
                 <button className="flex flex-col items-center gap-1 text-slate-500 hover:text-white transition-colors group">
                     <User className="w-5 h-5 group-hover:-translate-y-1 transition-transform" />
                     <span className="text-[9px] font-bold">PERFIL</span>
@@ -247,5 +274,12 @@ const Dashboard = () => {
         </div>
     );
 };
+
+// Missing Icon Component
+function ArrowRight({ className }: { className?: string }) {
+    return (
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></svg>
+    )
+}
 
 export default Dashboard;
