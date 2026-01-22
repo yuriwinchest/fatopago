@@ -59,7 +59,7 @@ const Login = () => {
             <div className="lg:w-[45%] flex flex-col bg-gradient-to-b from-[#9b3bea] to-[#6a11cb] relative overflow-hidden text-white px-6 pb-8">
 
                 {/* Header with Logo - Expanded */}
-                <div className="relative z-20 pt-8 pb-4 flex justify-center items-center w-full px-4">
+                <div className="relative z-20 pt-4 pb-0 flex justify-center items-center w-full px-4">
                     <img src="/logo.png" alt="Fatopago Logo" className="h-auto w-72 sm:w-96 md:w-[32rem] drop-shadow-2xl hover:scale-105 transition-transform duration-300" />
                 </div>
 
