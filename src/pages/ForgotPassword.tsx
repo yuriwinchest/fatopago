@@ -26,7 +26,7 @@ const ForgotPassword = () => {
         try {
             // Get the current URL origin to construct the redirect URL
             const redirectUrl = `${window.location.origin}/reset-password`;
-            
+
             const { error: authError } = await supabase.auth.resetPasswordForEmail(email, {
                 redirectTo: redirectUrl,
             });
@@ -47,9 +47,9 @@ const ForgotPassword = () => {
     const inputClasses = "w-full bg-white border border-gray-300 rounded-xl px-4 py-3.5 focus:ring-2 focus:ring-[#9D5CFF] focus:border-transparent outline-none transition-all placeholder:text-gray-400 text-gray-900 font-medium pl-10";
 
     return (
-        <div className="min-h-screen flex flex-col lg:flex-row font-sans">
+        <div className="min-h-screen flex flex-col lg:flex-row font-sans bg-[#0F0529]">
             {/* Left Panel - Vibrant Gradient (Same as Login) */}
-            <div className="lg:w-[45%] flex flex-col justify-between bg-gradient-to-br from-[#8a2ce2] to-[#6922D9] relative overflow-hidden text-white">
+            <div className="lg:w-[45%] flex flex-col justify-between bg-gradient-to-br from-[#8a2ce2] to-[#6922D9] relative overflow-hidden text-white rounded-b-[50px] lg:rounded-none shadow-2xl z-10">
 
                 {/* Header with Logo */}
                 <div className="relative z-20 bg-[#2e0259] pt-12 pb-8 rounded-b-[40px] shadow-2xl flex justify-center items-center">
@@ -92,7 +92,7 @@ const ForgotPassword = () => {
                     <div className="mb-6">
                         <NewsCarousel
                             tasks={MOCK_NEWS}
-                            onValidate={() => {}}
+                            onValidate={() => { }}
                             isReadOnly={true}
                             autoPlay={true}
                             interval={2000}

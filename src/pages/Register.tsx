@@ -124,8 +124,18 @@ const Register = () => {
 
             navigate('/login?registered=true');
         } catch (err: any) {
-            console.error(err);
-            setError(err.message || "Erro ao criar conta. Tente novamente.");
+            let msg = err.message || "Erro ao criar conta. Tente novamente.";
+
+            // Handle specific known errors without polluting console
+            if (msg.includes("User already registered") || msg.includes("already registered")) {
+                msg = "Este e-mail já está cadastrado. Por favor, faça login.";
+                // Do not console.error here
+            } else {
+                // Only log unexpected errors
+                console.error(err);
+            }
+
+            setError(msg);
         } finally {
             setLoading(false);
         }
@@ -134,9 +144,9 @@ const Register = () => {
     const inputClasses = "w-full bg-white border border-gray-300 rounded-xl px-4 py-3.5 focus:ring-2 focus:ring-[#9D5CFF] focus:border-transparent outline-none transition-all placeholder:text-gray-400 text-gray-900 font-medium";
 
     return (
-        <div className="min-h-screen flex flex-col lg:flex-row font-sans">
+        <div className="min-h-screen flex flex-col lg:flex-row font-sans bg-[#0F0529]">
             {/* Left Panel - Vibrant Gradient */}
-            <div className="lg:w-[45%] flex flex-col justify-between bg-gradient-to-br from-[#8a2ce2] to-[#6922D9] relative overflow-hidden text-white">
+            <div className="lg:w-[45%] flex flex-col justify-between bg-gradient-to-br from-[#8a2ce2] to-[#6922D9] relative overflow-hidden text-white rounded-b-[50px] lg:rounded-none shadow-2xl z-10">
 
                 {/* Header with Logo - Matches Reference */}
                 <div className="relative z-20 bg-[#2e0259] pt-12 pb-8 rounded-b-[40px] shadow-2xl flex justify-center items-center">

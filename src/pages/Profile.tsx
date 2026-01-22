@@ -132,7 +132,7 @@ const Profile = () => {
     return (
         <div className="min-h-screen bg-[#0F0529] text-white font-sans flex flex-col">
             {/* Header */}
-            <div className="sticky top-0 z-30 bg-[#0F0529]/90 backdrop-blur-md border-b border-white/5">
+            <div className="relative z-30 bg-[#2e0259] rounded-b-[40px] shadow-2xl pb-4 pt-2">
                 <div className="flex items-center justify-between px-6 py-4">
                     <button onClick={() => navigate('/dashboard')} className="p-2 -ml-2 rounded-full hover:bg-white/10 transition-colors">
                         <ArrowLeft className="w-6 h-6 text-slate-300" />

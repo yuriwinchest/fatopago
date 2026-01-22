@@ -161,7 +161,7 @@ const ValidationTask = () => {
     return (
         <div className="min-h-screen bg-[#0F0529] text-white font-sans relative overflow-hidden">
             {/* Header */}
-            <div className="flex items-center justify-between p-6 sticky top-0 bg-[#0F0529]/80 backdrop-blur-md z-20 border-b border-white/5">
+            <div className="relative z-20 bg-[#2e0259] rounded-b-[40px] shadow-2xl p-6 flex items-center justify-between">
                 <button onClick={() => navigate('/validation')} className="p-2 rounded-full hover:bg-white/10 transition-colors">
                     <ArrowLeft className="w-6 h-6 text-slate-300" />
                 </button>

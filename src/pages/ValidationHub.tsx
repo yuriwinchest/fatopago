@@ -153,7 +153,7 @@ const ValidationHub = () => {
     return (
         <div className="min-h-screen bg-[#0F0529] text-white font-sans pb-24">
             {/* Header */}
-            <div className="sticky top-0 z-30 bg-[#0F0529]/95 backdrop-blur-md border-b border-white/5 px-6 py-4 flex items-center justify-between">
+            <div className="relative z-30 bg-[#2e0259] rounded-b-[40px] shadow-2xl px-6 py-4 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                     <button onClick={() => navigate('/dashboard')} className="p-2 -ml-2 hover:bg-white/5 rounded-full transition-colors">
                         <ArrowLeft className="w-5 h-5 text-slate-400" />

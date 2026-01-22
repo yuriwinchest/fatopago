@@ -5,7 +5,7 @@ const HowItWorks = () => {
     return (
         <div className="min-h-screen bg-brand-dark text-white font-sans">
             {/* Header */}
-            <header className="p-6 lg:px-16 flex justify-between items-center bg-brand-dark/95 backdrop-blur-md fixed w-full z-50 border-b border-white/5">
+            <header className="fixed w-full z-50 bg-[#2e0259] rounded-b-[40px] shadow-2xl p-6 lg:px-16 flex justify-between items-center">
                 <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
                         <span className="font-bold text-primary">✓</span>

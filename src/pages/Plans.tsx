@@ -157,7 +157,7 @@ const Plans = () => {
     return (
         <div className="min-h-screen bg-[#0F0529] font-sans text-white overflow-y-auto pb-safe-area-bottom">
             {/* Header */}
-            <div className="pt-8 pb-6 px-6 text-center">
+            <div className="relative z-30 bg-[#2e0259] rounded-b-[40px] shadow-2xl pb-6 pt-8 px-6 text-center">
                 <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400">
                     Escolha seu Plano
                 </h1>

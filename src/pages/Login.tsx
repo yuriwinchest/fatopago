@@ -44,8 +44,14 @@ const Login = () => {
                 navigate('/plans');
             }
         } catch (err: any) {
-            console.error(err);
-            setError(err.message || "Erro ao entrar. Tente novamente.");
+            const msg = err.message || "Erro ao entrar. Tente novamente.";
+
+            // Suppress console error for expected auth failures
+            if (msg !== "Email ou senha incorretos." && msg !== "Invalid login credentials") {
+                console.error(err);
+            }
+
+            setError(msg);
         } finally {
             setLoading(false);
         }
@@ -54,9 +60,9 @@ const Login = () => {
     const inputClasses = "w-full bg-white border border-gray-300 rounded-xl px-4 py-3.5 focus:ring-2 focus:ring-[#9D5CFF] focus:border-transparent outline-none transition-all placeholder:text-gray-400 text-gray-900 font-medium";
 
     return (
-        <div className="min-h-screen flex flex-col lg:flex-row font-sans">
+        <div className="min-h-screen flex flex-col lg:flex-row font-sans bg-[#0F0529]">
             {/* Left Panel - Vibrant Gradient */}
-            <div className="lg:w-[45%] flex flex-col bg-gradient-to-b from-[#9b3bea] to-[#6a11cb] relative overflow-hidden text-white px-6 pb-8">
+            <div className="lg:w-[45%] flex flex-col bg-gradient-to-b from-[#9b3bea] to-[#6a11cb] relative overflow-hidden text-white px-6 pb-8 rounded-b-[50px] lg:rounded-none shadow-2xl z-10">
 
                 {/* Header with Logo - Expanded */}
                 <div className="relative z-20 pt-4 pb-0 flex justify-center items-center w-full px-4">
