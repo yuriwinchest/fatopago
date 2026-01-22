@@ -62,17 +62,16 @@ const Login = () => {
     return (
         <div className="min-h-screen flex flex-col lg:flex-row font-sans bg-[#0F0529]">
             {/* Left Panel - Vibrant Gradient */}
-            <div className="lg:w-[45%] flex flex-col bg-gradient-to-b from-[#9b3bea] to-[#6a11cb] relative overflow-hidden text-white px-6 pb-8 rounded-b-[50px] lg:rounded-none shadow-2xl z-10">
-
-                {/* Header with Logo - Expanded */}
-                <div className="relative z-20 pt-4 pb-0 flex justify-center items-center w-full px-4">
+            <div className="lg:w-[45%] flex flex-col bg-gradient-to-b from-[#9b3bea] to-[#6a11cb] relative overflow-hidden text-white shadow-2xl z-10">
+                {/* Header with Logo - Matches Reference */}
+                <div className="relative z-20 bg-[#2e0259] pt-12 pb-8 rounded-b-[40px] shadow-2xl flex justify-center items-center">
                     <img src="/logo.png" alt="Fatopago Logo" className="h-auto w-72 sm:w-96 md:w-[32rem] drop-shadow-2xl hover:scale-105 transition-transform duration-300" />
                 </div>
 
                 {/* Background Glow */}
                 <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_top,_var(--tw-gradient-stops))] from-purple-400/20 via-transparent to-transparent pointer-events-none" />
 
-                <div className="relative z-10 flex-1 flex flex-col max-w-md mx-auto w-full px-4">
+                <div className="relative z-10 flex-1 flex flex-col max-w-md mx-auto w-full px-6 pb-8 pt-8">
                     <h1 className="text-3xl md:text-4xl font-extrabold mb-6 text-center drop-shadow-md">
                         Como funciona?
                     </h1>
