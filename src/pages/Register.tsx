@@ -60,8 +60,6 @@ const Register = () => {
         const termsCheckbox = form.querySelector('#terms') as HTMLInputElement;
         const acceptedTerms = termsCheckbox?.checked;
 
-        console.log("Tentando cadastro para:", email);
-
         // 2. Validate
         if (!acceptedTerms) {
             setError("Você precisa aceitar os Termos de Uso.");
@@ -77,19 +75,26 @@ const Register = () => {
 
         try {
             // 3. Create Auth User
-            const { data: authData, error: signUpError } = await supabase.auth.signUp({
+            const signUpPromise = supabase.auth.signUp({
                 email: email,
                 password: password,
                 options: {
                     data: {
                         name: name,
                         lastname: lastname,
-                        city: city, // Passing metadata for the trigger
+                        city: city,
                         state: state,
-                        affiliate_code: affiliateCode
+                        affiliate_code: affiliateCode || null
                     }
                 }
             });
+
+            const { data: authData, error: signUpError } = await Promise.race([
+                signUpPromise,
+                new Promise<never>((_resolve, reject) =>
+                    setTimeout(() => reject(new Error("Tempo excedido ao cadastrar. Tente novamente.")), 20000)
+                )
+            ]);
 
             if (signUpError) throw signUpError;
 
@@ -102,7 +107,6 @@ const Register = () => {
                             id: authData.user.id,
                             name: name,
                             lastname: lastname,
-                            email: email,
                             city: city,
                             state: state,
                             affiliate_code: affiliateCode || null,
@@ -116,9 +120,9 @@ const Register = () => {
                     // We don't throw here because the trigger might have worked.
                     // We continue to login/success.
                 }
-
-                navigate('/login?registered=true');
             }
+
+            navigate('/login?registered=true');
         } catch (err: any) {
             console.error(err);
             setError(err.message || "Erro ao criar conta. Tente novamente.");
@@ -131,16 +135,34 @@ const Register = () => {
 
     return (
         <div className="min-h-screen flex flex-col lg:flex-row font-sans">
-            {/* Left Panel - Vibrant Purple */}
-            <div className="lg:w-[45%] p-8 lg:p-16 flex flex-col justify-between bg-gradient-to-br from-[#9D5CFF] to-[#6922D9] relative overflow-hidden text-white">
-                <div className="relative z-10">
-                    <div className="flex items-center gap-2 mb-12">
-                        <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm">
-                            <span className="font-bold text-white">✓</span>
-                        </div>
-                        <span className="font-bold text-xl tracking-tight">FatoPago</span>
-                    </div>
+            {/* Left Panel - Vibrant Gradient */}
+            <div className="lg:w-[45%] flex flex-col justify-between bg-gradient-to-br from-[#8a2ce2] to-[#6922D9] relative overflow-hidden text-white">
 
+                {/* Header with Logo - Matches Reference */}
+                <div className="relative z-20 bg-[#2e0259] pt-12 pb-8 rounded-b-[40px] shadow-2xl flex justify-center items-center">
+                    <div className="flex items-center gap-3 transform scale-110">
+                        <div className="relative w-12 h-10 bg-gradient-to-br from-[#a855f7] to-[#7e22ce] rounded-lg flex items-center justify-center shadow-lg border border-white/20 transform -skew-x-12">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-white transform skew-x-12">
+                                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                                <polyline points="22 4 12 14.01 9 11.01" />
+                            </svg>
+                        </div>
+                        <h1 className="text-3xl font-black tracking-wide text-white drop-shadow-lg italic">FATOPAGO</h1>
+                    </div>
+                    {/* Decorative star from reference */}
+                    <div className="absolute bottom-4 right-8 w-4 h-4 text-purple-300 opacity-80">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 0L14.59 9.41L24 12L14.59 14.59L12 24L9.41 14.59L0 12L9.41 9.41L12 0Z" /></svg>
+                    </div>
+                </div>
+
+                {/* Background Watermark */}
+                <img
+                    src="/watermark.png?v=4"
+                    alt=""
+                    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] opacity-[0.05] pointer-events-none select-none mix-blend-screen blur-[1px]"
+                />
+
+                <div className="relative z-10 px-8 lg:px-16 pt-8">
                     <h1 className="text-4xl lg:text-5xl font-extrabold mb-6 leading-tight">
                         Junte-se à elite da verificação
                     </h1>
@@ -171,7 +193,7 @@ const Register = () => {
                     </div>
                 </div>
 
-                <div className="relative z-10 mt-12 flex items-center gap-4">
+                <div className="relative z-10 mt-12 flex items-center gap-4 px-8 lg:px-16 pb-8">
                     <div className="flex -space-x-3">
                         <img src="https://i.pravatar.cc/100?img=1" alt="User" className="w-10 h-10 rounded-full border-2 border-[#8a2ce2]" />
                         <img src="https://i.pravatar.cc/100?img=5" alt="User" className="w-10 h-10 rounded-full border-2 border-[#8a2ce2]" />
@@ -191,6 +213,8 @@ const Register = () => {
             {/* Right Panel - Dark Navy Form */}
             <div className="lg:w-[55%] bg-[#0F0529] p-8 lg:p-16 flex flex-col justify-center">
                 <div className="max-w-md w-full mx-auto">
+                    {/* Logo removed - now in header */}
+
                     <h2 className="text-3xl font-bold text-white mb-2">Criar conta</h2>
                     <p className="text-slate-400 mb-8">Comece sua jornada como validador hoje mesmo.</p>
 
@@ -339,7 +363,7 @@ const Register = () => {
 
                     <div className="mt-8 text-center">
                         <p className="text-sm text-slate-400">
-                            Já possui uma conta? <Link to="/login" className="text-[#B084FF] font-bold hover:underline">Entrar agora</Link>
+                            Já possui uma conta? <Link to="/" className="text-[#B084FF] font-bold hover:underline">Entrar agora</Link>
                         </p>
                     </div>
 

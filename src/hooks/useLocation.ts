@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 interface Estado {
     id: number;
@@ -11,31 +11,42 @@ interface Municipio {
     nome: string;
 }
 
+// Hardcoded states to guarantee loading
+const STATIC_STATES: Estado[] = [
+    { id: 12, sigla: 'AC', nome: 'Acre' },
+    { id: 27, sigla: 'AL', nome: 'Alagoas' },
+    { id: 16, sigla: 'AP', nome: 'Amapá' },
+    { id: 13, sigla: 'AM', nome: 'Amazonas' },
+    { id: 29, sigla: 'BA', nome: 'Bahia' },
+    { id: 23, sigla: 'CE', nome: 'Ceará' },
+    { id: 53, sigla: 'DF', nome: 'Distrito Federal' },
+    { id: 32, sigla: 'ES', nome: 'Espírito Santo' },
+    { id: 52, sigla: 'GO', nome: 'Goiás' },
+    { id: 21, sigla: 'MA', nome: 'Maranhão' },
+    { id: 51, sigla: 'MT', nome: 'Mato Grosso' },
+    { id: 50, sigla: 'MS', nome: 'Mato Grosso do Sul' },
+    { id: 31, sigla: 'MG', nome: 'Minas Gerais' },
+    { id: 15, sigla: 'PA', nome: 'Pará' },
+    { id: 25, sigla: 'PB', nome: 'Paraíba' },
+    { id: 41, sigla: 'PR', nome: 'Paraná' },
+    { id: 26, sigla: 'PE', nome: 'Pernambuco' },
+    { id: 22, sigla: 'PI', nome: 'Piauí' },
+    { id: 33, sigla: 'RJ', nome: 'Rio de Janeiro' },
+    { id: 24, sigla: 'RN', nome: 'Rio Grande do Norte' },
+    { id: 43, sigla: 'RS', nome: 'Rio Grande do Sul' },
+    { id: 11, sigla: 'RO', nome: 'Rondônia' },
+    { id: 14, sigla: 'RR', nome: 'Roraima' },
+    { id: 42, sigla: 'SC', nome: 'Santa Catarina' },
+    { id: 35, sigla: 'SP', nome: 'São Paulo' },
+    { id: 28, sigla: 'SE', nome: 'Sergipe' },
+    { id: 17, sigla: 'TO', nome: 'Tocantins' }
+];
+
 export function useLocation() {
-    const [states, setStates] = useState<Estado[]>([]);
+    const [states] = useState<Estado[]>(STATIC_STATES);
     const [cities, setCities] = useState<Municipio[]>([]);
-    const [loadingStates, setLoadingStates] = useState(false);
     const [loadingCities, setLoadingCities] = useState(false);
 
-    // Fetch States on mount
-    useEffect(() => {
-        async function fetchStates() {
-            setLoadingStates(true);
-            try {
-                const response = await fetch('https://servicodados.ibge.gov.br/api/v1/localidades/estados?orderBy=nome');
-                const data = await response.json();
-                setStates(data);
-            } catch (error) {
-                console.error('Error fetching states:', error);
-            } finally {
-                setLoadingStates(false);
-            }
-        }
-
-        fetchStates();
-    }, []);
-
-    // Function to fetch cities for a selected state
     const fetchCities = async (uf: string) => {
         if (!uf) {
             setCities([]);
@@ -45,6 +56,7 @@ export function useLocation() {
         setLoadingCities(true);
         try {
             const response = await fetch(`https://servicodados.ibge.gov.br/api/v1/localidades/estados/${uf}/municipios?orderBy=nome`);
+            if (!response.ok) throw new Error("IBGE API Error");
             const data = await response.json();
             setCities(data);
         } catch (error) {
@@ -58,7 +70,7 @@ export function useLocation() {
     return {
         states,
         cities,
-        loadingStates,
+        loadingStates: false,
         loadingCities,
         fetchCities
     };

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowRight, Eye, EyeOff, AlertCircle, Loader2 } from 'lucide-react';
+import { ArrowRight, Eye, EyeOff, AlertCircle, Loader2, Clock, List, Newspaper, Trophy, Medal } from 'lucide-react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 
@@ -41,7 +41,7 @@ const Login = () => {
             }
 
             if (data.user) {
-                navigate('/dashboard');
+                navigate('/plans');
             }
         } catch (err: any) {
             console.error(err);
@@ -56,31 +56,85 @@ const Login = () => {
     return (
         <div className="min-h-screen flex flex-col lg:flex-row font-sans">
             {/* Left Panel - Vibrant Gradient */}
-            <div className="lg:w-[45%] p-8 lg:p-16 flex flex-col justify-between bg-gradient-to-br from-[#9D5CFF] to-[#6922D9] relative overflow-hidden text-white">
-                <div className="relative z-10">
-                    <div className="flex items-center gap-2 mb-12">
-                        <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm">
-                            <span className="font-bold text-white">✓</span>
-                        </div>
-                        <span className="font-bold text-xl tracking-tight">FatoPago</span>
-                    </div>
+            <div className="lg:w-[45%] flex flex-col bg-gradient-to-b from-[#9b3bea] to-[#6a11cb] relative overflow-hidden text-white px-6 pb-8">
 
-                    <h1 className="text-4xl lg:text-5xl font-extrabold mb-6 leading-tight">
-                        Bem-vindo de volta
-                    </h1>
-                    <p className="text-purple-100 text-lg mb-8 leading-relaxed max-w-md">
-                        Acesse seu painel para validar novas notícias e acompanhar seus rendimentos.
-                    </p>
+                {/* Header with Logo - Expanded */}
+                <div className="relative z-20 pt-8 pb-4 flex justify-center items-center w-full px-4">
+                    <img src="/logo.png" alt="Fatopago Logo" className="h-auto w-72 sm:w-96 md:w-[32rem] drop-shadow-2xl hover:scale-105 transition-transform duration-300" />
                 </div>
 
-                {/* Decorative Elements */}
-                <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-purple-400/20 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none" />
-                <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-purple-900/20 rounded-full blur-3xl -ml-20 -mb-20 pointer-events-none" />
+                {/* Background Glow */}
+                <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_top,_var(--tw-gradient-stops))] from-purple-400/20 via-transparent to-transparent pointer-events-none" />
+
+                <div className="relative z-10 flex-1 flex flex-col max-w-md mx-auto w-full px-4">
+                    <h1 className="text-3xl md:text-4xl font-extrabold mb-6 text-center drop-shadow-md">
+                        Como funciona?
+                    </h1>
+
+                    <div className="space-y-4">
+                        {[
+                            {
+                                step: "1",
+                                title: "Crie sua conta em poucos minutos.",
+                                desc: "Rapidamente e fácil.",
+                                icon: <Clock className="w-6 h-6 text-white" />
+                            },
+                            {
+                                step: "2",
+                                title: "Escolha seu plano",
+                                desc: "Selecione o plano que melhor se encaixa no seu perfil e objetivos.",
+                                icon: <List className="w-6 h-6 text-white" />
+                            },
+                            {
+                                step: "3",
+                                title: "Valide notícias.",
+                                desc: "Analise e valide notícias diariamente dentro da plataforma.",
+                                icon: <Newspaper className="w-6 h-6 text-white" />
+                            },
+                            {
+                                step: "4",
+                                title: "Ranking diário por cidade",
+                                desc: "Os participantes são ranqueados diariamente por desempenho em cada cidade.",
+                                icon: <Medal className="w-6 h-6 text-white" />
+                            },
+                            {
+                                step: "5",
+                                title: "Premiação diária",
+                                desc: "Após o ciclo de 24h, quem ficar em 1º lugar leva até R$ 200,00 de prêmio!",
+                                icon: <Trophy className="w-6 h-6 text-white" />
+                            }
+                        ].map((item, idx) => (
+                            <div key={idx} className="relative group">
+                                {/* Glass Card */}
+                                <div className="absolute inset-0 bg-white/10 rounded-2xl blur-[1px] border border-white/20 shadow-[0_8px_32px_0_rgba(31,38,135,0.37)]"></div>
+                                <div className="relative flex items-center p-4 rounded-2xl bg-gradient-to-r from-white/10 to-transparent border border-white/20 shadow-lg backdrop-blur-sm">
+
+                                    {/* Number Badge */}
+                                    <div className="flex-shrink-0 w-12 h-12 rounded-full bg-gradient-to-br from-[#d946ef] to-[#8b5cf6] border-2 border-white/30 flex items-center justify-center shadow-inner">
+                                        <span className="text-xl font-bold text-white drop-shadow-md">{item.step}</span>
+                                    </div>
+
+                                    {/* Content */}
+                                    <div className="flex-1 ml-4 mr-2">
+                                        <h3 className="font-bold text-base leading-tight mb-1 text-white drop-shadow-sm">{item.title}</h3>
+                                        <p className="text-purple-100 text-xs leading-snug font-medium opacity-90">{item.desc}</p>
+                                    </div>
+
+                                    {/* Right Icon Container */}
+                                    <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center shadow-inner backdrop-blur-md">
+                                        {item.icon}
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
             </div>
 
             {/* Right Panel - Login Form */}
-            <div className="lg:w-[55%] bg-[#0F0529] p-8 lg:p-16 flex flex-col justify-center">
+            <div className="lg:w-[55%] bg-[#0F0529] p-8 lg:p-16 flex flex-col justify-center relative">
                 <div className="max-w-md w-full mx-auto">
+                    {/* Logo removed from here as it's now in the header */}
 
                     {registered && (
                         <div className="mb-6 p-4 bg-green-500/10 border border-green-500/20 rounded-xl flex items-center gap-3 text-green-400">
@@ -107,7 +161,7 @@ const Login = () => {
                         <div className="space-y-1.5">
                             <div className="flex justify-between items-center ml-1">
                                 <label className="text-sm font-semibold text-slate-300">Senha</label>
-                                <a href="#" className="text-xs text-[#B084FF] hover:underline">Esqueceu a senha?</a>
+                                <Link to="/forgot-password" className="text-xs text-[#B084FF] hover:underline">Esqueceu a senha?</Link>
                             </div>
                             <div className="relative">
                                 <input
@@ -155,7 +209,7 @@ const Login = () => {
 
                     <div className="mt-8 text-center">
                         <p className="text-sm text-slate-400">
-                            Ainda não tem conta? <Link to="/" className="text-[#B084FF] font-bold hover:underline">Cadastre-se</Link>
+                            Ainda não tem conta? <Link to="/register" className="text-[#B084FF] font-bold hover:underline">Cadastre-se</Link>
                         </p>
                     </div>
                 </div>
