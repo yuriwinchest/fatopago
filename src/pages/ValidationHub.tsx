@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { ArrowLeft, Loader2, Filter, CheckCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import AppHeader from '../components/AppHeader';
 
 const withTimeout = (promise: Promise<any>, ms: number, message: string): Promise<any> => {
     let timeoutId: ReturnType<typeof setTimeout> | undefined;
@@ -35,7 +36,6 @@ const ValidationHub = () => {
     const [loading, setLoading] = useState(true);
     const [tasks, setTasks] = useState<NewsTask[]>([]);
     const [selectedCategory, setSelectedCategory] = useState('Todas');
-    const [userProfile, setUserProfile] = useState<any>(null);
     const [loadError, setLoadError] = useState<string | null>(null);
 
     // Carousel Refs and State
@@ -49,23 +49,6 @@ const ValidationHub = () => {
             setLoading(true);
             setLoadError(null);
             try {
-                // Fetch User (for balance/stats in header)
-                const { data: { session } } = await withTimeout(
-                    supabase.auth.getSession(),
-                    8000,
-                    'Tempo excedido ao validar sessão. Tente novamente.'
-                );
-
-                const user = session?.user;
-                if (user) {
-                    const { data: profile } = await withTimeout(
-                        supabase.from('profiles').select('*').eq('id', user.id).single(),
-                        12000,
-                        'Tempo excedido ao carregar perfil. Tente novamente.'
-                    );
-                    setUserProfile(profile);
-                }
-
                 // Fetch Tasks
                 const { data, error } = await withTimeout(
                     supabase
@@ -152,24 +135,12 @@ const ValidationHub = () => {
 
     return (
         <div className="min-h-screen bg-[#0F0529] text-white font-sans pb-24">
-            {/* Header */}
-            <div className="relative z-30 bg-[#2e0259] rounded-b-[40px] shadow-2xl px-6 py-4 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                    <button onClick={() => navigate('/dashboard')} className="p-2 -ml-2 hover:bg-white/5 rounded-full transition-colors">
-                        <ArrowLeft className="w-5 h-5 text-slate-400" />
-                    </button>
-                    <div>
-                        <h1 className="font-bold text-lg leading-none">Painel de Validação</h1>
-                        <p className="text-[10px] text-slate-400 mt-1 font-medium">Escolha uma notícia para verificar</p>
-                    </div>
-                </div>
-                {userProfile && (
-                    <div className="text-right">
-                        <p className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Saldo</p>
-                        <p className="text-sm font-bold text-[#00E676]">{formatCurrency(userProfile.current_balance || 0)}</p>
-                    </div>
-                )}
-            </div>
+            {/* Header with Logo */}
+            <AppHeader
+                title="Painel de Validação"
+                subtitle="Escolha uma notícia para verificar"
+                showBackButton={true}
+            />
 
             <div className="p-6">
                 {loadError && (

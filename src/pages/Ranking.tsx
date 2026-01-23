@@ -1,8 +1,8 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Trophy, MapPin, ArrowLeft, Loader2 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Trophy, MapPin, Loader2 } from 'lucide-react';
+import AppHeader from '../components/AppHeader';
 
 interface Profile {
     id: string;
@@ -22,7 +22,6 @@ const MOCK_PROFILES = [
 ];
 
 const Ranking = () => {
-    const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
     const [profiles, setProfiles] = useState<Profile[]>([]);
     const [scope, setScope] = useState<'city' | 'state' | 'national'>('national');
@@ -76,38 +75,33 @@ const Ranking = () => {
     return (
 
         <div className="min-h-screen bg-[#0F0529] text-white font-sans flex flex-col">
-            {/* Header - Fixed/Sticky with solid background to prevent overlap transparency issues */}
-            <div className="relative z-30 bg-[#2e0259] rounded-b-[40px] shadow-2xl pb-2 pt-2">
-                <div className="flex items-center justify-between px-6 py-4">
-                    <button onClick={() => navigate('/dashboard')} className="p-2 -ml-2 rounded-full hover:bg-white/10 transition-colors">
-                        <ArrowLeft className="w-6 h-6 text-slate-300" />
-                    </button>
-                    <h1 className="font-bold text-lg tracking-wide uppercase">Ranking Global</h1>
-                    <div className="w-10" /> {/* Spacer for optical centering */}
-                </div>
+            {/* Header with Logo */}
+            <AppHeader
+                title="Ranking Global"
+                showBackButton={true}
+            />
 
-                {/* Scope Tabs - Inside Header to stick with it */}
-                <div className="px-6 pb-4">
-                    <div className="bg-[#1A1040] p-1 rounded-xl flex items-center border border-white/5">
-                        <button
-                            onClick={() => setScope('city')}
-                            className={`flex-1 py-3 rounded-lg text-xs font-bold transition-all uppercase tracking-wide ${scope === 'city' ? 'bg-[#9D5CFF] text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
-                        >
-                            Cidade
-                        </button>
-                        <button
-                            onClick={() => setScope('state')}
-                            className={`flex-1 py-3 rounded-lg text-xs font-bold transition-all uppercase tracking-wide ${scope === 'state' ? 'bg-[#9D5CFF] text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
-                        >
-                            Estado
-                        </button>
-                        <button
-                            onClick={() => setScope('national')}
-                            className={`flex-1 py-3 rounded-lg text-xs font-bold transition-all uppercase tracking-wide ${scope === 'national' ? 'bg-[#9D5CFF] text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
-                        >
-                            Brasil
-                        </button>
-                    </div>
+            {/* Scope Tabs */}
+            <div className="px-6 py-4 -mt-4 relative z-20">
+                <div className="bg-[#1A1040] p-1 rounded-xl flex items-center border border-white/5">
+                    <button
+                        onClick={() => setScope('city')}
+                        className={`flex-1 py-3 rounded-lg text-xs font-bold transition-all uppercase tracking-wide ${scope === 'city' ? 'bg-[#9D5CFF] text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
+                    >
+                        Cidade
+                    </button>
+                    <button
+                        onClick={() => setScope('state')}
+                        className={`flex-1 py-3 rounded-lg text-xs font-bold transition-all uppercase tracking-wide ${scope === 'state' ? 'bg-[#9D5CFF] text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
+                    >
+                        Estado
+                    </button>
+                    <button
+                        onClick={() => setScope('national')}
+                        className={`flex-1 py-3 rounded-lg text-xs font-bold transition-all uppercase tracking-wide ${scope === 'national' ? 'bg-[#9D5CFF] text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
+                    >
+                        Brasil
+                    </button>
                 </div>
             </div>
 

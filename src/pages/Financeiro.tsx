@@ -6,12 +6,11 @@ import {
     ArrowDownLeft,
     Clock,
     Wallet,
-    ArrowLeft,
     Calendar,
     Download
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
 import WithdrawalModal from '../components/WithdrawalModal';
+import AppHeader from '../components/AppHeader';
 
 interface Transaction {
     id: string;
@@ -23,7 +22,6 @@ interface Transaction {
 }
 
 const Financeiro = () => {
-    const navigate = useNavigate();
     const [balance, setBalance] = useState(0);
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [filter, setFilter] = useState<'all' | 'credit' | 'debit'>('all');
@@ -87,16 +85,11 @@ const Financeiro = () => {
 
     return (
         <div className="min-h-screen bg-[#0F0529] text-white font-sans flex flex-col">
-            {/* Header */}
-            <div className="relative z-30 bg-[#2e0259] rounded-b-[40px] shadow-2xl pb-4 pt-2">
-                <div className="flex items-center justify-between px-6 py-4">
-                    <button onClick={() => navigate('/dashboard')} className="p-2 -ml-2 rounded-full hover:bg-white/10 transition-colors">
-                        <ArrowLeft className="w-6 h-6 text-slate-300" />
-                    </button>
-                    <h1 className="font-bold text-lg tracking-wide uppercase">Minha Carteira</h1>
-                    <div className="w-10" />
-                </div>
-            </div>
+            {/* Header with Logo */}
+            <AppHeader
+                title="Minha Carteira"
+                showBackButton={true}
+            />
 
             <div className="flex-1 overflow-y-auto pb-safe-area-bottom p-6">
 

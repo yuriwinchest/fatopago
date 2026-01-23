@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Check, Zap, Crown, Shield, ArrowRight, Loader2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import AppHeader from '../components/AppHeader';
 
 // Main Component
 const Plans = () => {
@@ -156,23 +157,22 @@ const Plans = () => {
 
     return (
         <div className="min-h-screen bg-[#0F0529] font-sans text-white overflow-y-auto pb-safe-area-bottom">
-            {/* Header */}
-            <div className="relative z-30 bg-[#2e0259] rounded-b-[40px] shadow-2xl pb-6 pt-8 px-6 text-center">
-                <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400">
-                    Escolha seu Plano
-                </h1>
-                <p className="text-slate-400 mt-2 text-sm leading-relaxed max-w-sm mx-auto">
-                    Complete os ciclos de validação para desbloquear novos níveis de ganho.
-                </p>
-                {/* Status Indicator */}
-                {planStatus && (
-                    <div className="mt-4 inline-block bg-white/10 px-4 py-1 rounded-full border border-white/5">
+            {/* Header with Logo */}
+            <AppHeader
+                title="Escolha seu Plano"
+                subtitle="Complete os ciclos de validação para desbloquear novos níveis de ganho."
+            />
+
+            {/* Status Indicator */}
+            {planStatus && (
+                <div className="text-center -mt-4 mb-4 relative z-20">
+                    <div className="inline-block bg-white/10 px-4 py-1 rounded-full border border-white/5">
                         <p className="text-xs text-purple-200">
                             Último ciclo: <span className="font-bold text-white uppercase">{planStatus.lastPlan}</span> ({new Date(planStatus.date || '').toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})
                         </p>
                     </div>
-                )}
-            </div>
+                </div>
+            )}
 
             {/* Plans Grid */}
             <div className="px-6 pb-12 flex flex-col gap-6 max-w-lg mx-auto">

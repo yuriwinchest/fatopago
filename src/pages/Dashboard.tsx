@@ -223,17 +223,11 @@ const Dashboard = () => {
 
                 {/* Centered Logo Area - Top of screen */}
                 <div className="flex flex-col items-center justify-center mb-4 pt-2">
-                    <div className="flex items-center gap-3 transform scale-110">
-                        {/* Custom Logo Construction */}
-                        <div className="relative w-14 h-12 bg-gradient-to-br from-[#a855f7] to-[#7e22ce] rounded-xl flex items-center justify-center shadow-lg border border-white/20 transform -skew-x-12">
-                            {/* SVG Checkmark instead of Lucide to ensure rendering */}
-                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-white transform skew-x-12">
-                                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-                                <polyline points="22 4 12 14.01 9 11.01" />
-                            </svg>
-                        </div>
-                        <h1 className="text-4xl font-black tracking-wide text-white drop-shadow-lg italic">FATOPAGO</h1>
-                    </div>
+                    <img
+                        src="/logo.png"
+                        alt="Fatopago Logo"
+                        className="h-auto w-48 sm:w-56 md:w-64 drop-shadow-2xl hover:scale-105 transition-transform duration-300"
+                    />
                 </div>
 
                 {/* Decorative Elements */}
