@@ -41,7 +41,7 @@ const Login = () => {
             }
 
             if (data.user) {
-                navigate('/plans');
+                navigate('/home');
             }
         } catch (err: any) {
             const msg = err.message || "Erro ao entrar. Tente novamente.";

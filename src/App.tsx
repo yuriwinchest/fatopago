@@ -11,6 +11,7 @@ import ValidationTask from './pages/ValidationTask';
 import Ranking from './pages/Ranking';
 import Profile from './pages/Profile';
 import Plans from './pages/Plans';
+import HomePage from './pages/HomePage';
 import './App.css';
 
 function App() {
@@ -18,6 +19,7 @@ function App() {
         <Router>
             <Routes>
                 <Route path="/" element={<Login />} />
+                <Route path="/home" element={<HomePage />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
                 <Route path="/forgot-password" element={<ForgotPassword />} />
