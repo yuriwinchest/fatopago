@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import WithdrawalModal from '../components/WithdrawalModal';
 import AppHeader from '../components/AppHeader';
+import BottomNav from '../components/BottomNav';
 
 interface Transaction {
     id: string;
@@ -84,7 +85,7 @@ const Financeiro = () => {
         : transactions.filter(t => t.type === filter);
 
     return (
-        <div className="min-h-screen bg-[#0F0529] text-white font-sans flex flex-col">
+        <div className="min-h-screen bg-[#0F0529] text-white font-sans flex flex-col pb-24">
             {/* Header with Logo */}
             <AppHeader
                 title="Minha Carteira"
@@ -194,6 +195,7 @@ const Financeiro = () => {
                     setRefreshTrigger(prev => prev + 1);
                 }}
             />
+            <BottomNav />
         </div>
     );
 }

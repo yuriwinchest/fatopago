@@ -1,6 +1,6 @@
 
-import { useState } from 'react';
-import { CheckCircle, XCircle, Share2, Loader2, X } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { AlertCircle, CheckCircle, XCircle, Share2, Loader2, X } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 const withTimeout = (promise: Promise<any>, ms: number, message: string): Promise<any> => {
@@ -45,6 +45,23 @@ const ValidationModal = ({ task, isOpen, onClose, onValidated }: ValidationModal
     // const [proofFile, setProofFile] = useState<File | null>(null);
 
     if (!isOpen) return null;
+
+    const sheetRef = useRef<HTMLDivElement | null>(null);
+    const initialFocusRef = useRef<HTMLButtonElement | null>(null);
+
+    const safePaddingStyle = useMemo(
+        () =>
+            ({
+                paddingBottom: 'calc(16px + env(safe-area-inset-bottom))',
+                paddingTop: 'calc(8px + env(safe-area-inset-top))'
+            }) as React.CSSProperties,
+        []
+    );
+
+    useEffect(() => {
+        // Focus the primary action on open for better "native" feel
+        initialFocusRef.current?.focus();
+    }, []);
 
     const handleVote = async (verdict: boolean) => {
         if (verdict === false && !isFalseFlow) {
@@ -91,13 +108,21 @@ const ValidationModal = ({ task, isOpen, onClose, onValidated }: ValidationModal
             });
 
             if (insertError) {
-                // If error is about missing columns, we fallback to basic insert
+                // If schema doesn't support justification yet, DON'T silently drop the data for "FALSO".
                 if (insertError.message.includes("column")) {
-                    await supabase.from('validations').insert({
+                    if (verdict === false) {
+                        throw new Error(
+                            "Seu app precisa de uma atualização no banco para salvar a justificativa do FALSO. (Campos: validations.justification e validations.proof_link)"
+                        );
+                    }
+
+                    // For TRUE votes we can safely fallback (no extra fields needed)
+                    const { error: fallbackError } = await supabase.from('validations').insert({
                         task_id: task.id,
                         user_id: user.id,
                         verdict: verdict
                     });
+                    if (fallbackError) throw fallbackError;
                 } else {
                     throw insertError;
                 }
@@ -138,15 +163,47 @@ const ValidationModal = ({ task, isOpen, onClose, onValidated }: ValidationModal
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="bg-[#1A1040] w-full max-w-lg rounded-3xl border border-white/10 shadow-2xl relative overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+        <div
+            className="fixed inset-0 z-[100] flex items-end md:items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Validar notícia"
+            onMouseDown={(e) => {
+                // close on backdrop tap/click (mobile-native behavior)
+                if (e.target === e.currentTarget) onClose();
+            }}
+        >
+            <div
+                ref={sheetRef}
+                className="bg-[#1A1040] w-full md:max-w-lg border border-white/10 shadow-2xl relative overflow-hidden flex flex-col h-[92vh] md:h-auto md:max-h-[90vh] rounded-t-[28px] md:rounded-3xl animate-in slide-in-from-bottom-8 md:zoom-in-95 duration-200"
+                style={safePaddingStyle}
+            >
+                {/* Drag handle (mobile affordance) */}
+                <div className="md:hidden pt-2 pb-1 flex justify-center">
+                    <div className="h-1 w-12 rounded-full bg-white/15" />
+                </div>
 
-                {/* Close Button */}
-                {!showSuccess && (
-                    <button onClick={onClose} className="absolute top-4 right-4 p-2 rounded-full bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-colors z-30">
-                        <X className="w-5 h-5" />
-                    </button>
-                )}
+                {/* Header */}
+                <div className="px-5 md:px-6 pt-2 md:pt-4 pb-3 border-b border-white/5 flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                        <span className="inline-flex bg-purple-500/20 text-purple-300 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">
+                            {task.content.category}
+                        </span>
+                        <h2 className="mt-3 text-base md:text-xl font-bold text-white leading-snug pr-2 line-clamp-3">
+                            {task.content.title}
+                        </h2>
+                    </div>
+
+                    {!showSuccess && (
+                        <button
+                            onClick={onClose}
+                            className="shrink-0 h-11 w-11 grid place-items-center rounded-full bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white transition-colors"
+                            aria-label="Fechar"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
+                    )}
+                </div>
 
                 {/* Success Overlay */}
                 {showSuccess && (
@@ -159,18 +216,8 @@ const ValidationModal = ({ task, isOpen, onClose, onValidated }: ValidationModal
                     </div>
                 )}
 
-                <div className="p-6 overflow-y-auto custom-scrollbar">
-                    {/* Header Badge */}
-                    <div className="flex justify-between items-start mb-4">
-                        <span className="bg-purple-500/20 text-purple-300 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">
-                            {task.content.category}
-                        </span>
-                    </div>
-
-                    {/* Title */}
-                    <h2 className="text-xl font-bold text-white leading-tight mb-4 pr-8">
-                        {task.content.title}
-                    </h2>
+                {/* Body */}
+                <div className="px-5 md:px-6 py-4 overflow-y-auto flex-1">
 
                     {/* Only show description if NOT in False Flow to save space, or keep small? Keep. */}
                     {!isFalseFlow && (
@@ -202,7 +249,7 @@ const ValidationModal = ({ task, isOpen, onClose, onValidated }: ValidationModal
                                     value={justification}
                                     onChange={(e) => setJustification(e.target.value)}
                                     placeholder="Explique por que esta notícia é falsa..."
-                                    className="w-full bg-black/20 border border-white/10 rounded-xl p-3 text-sm text-white focus:border-red-500/50 outline-none h-24 resize-none"
+                                    className="w-full bg-black/20 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white focus:border-red-500/50 outline-none min-h-[112px] resize-none"
                                 />
                             </div>
 
@@ -213,7 +260,7 @@ const ValidationModal = ({ task, isOpen, onClose, onValidated }: ValidationModal
                                     value={proofLink}
                                     onChange={(e) => setProofLink(e.target.value)}
                                     placeholder="https://fonte-confiavel.com/..."
-                                    className="w-full bg-black/20 border border-white/10 rounded-xl p-3 text-sm text-white focus:border-red-500/50 outline-none"
+                                    className="w-full bg-black/20 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white focus:border-red-500/50 outline-none min-h-[48px]"
                                 />
                             </div>
 
@@ -224,7 +271,7 @@ const ValidationModal = ({ task, isOpen, onClose, onValidated }: ValidationModal
                                         type="file"
                                         accept="image/*"
                                         // onChange={(e) => setProofFile(e.target.files?.[0] || null)}
-                                        className="w-full bg-black/20 border border-white/10 rounded-xl p-2 text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-white/10 file:text-white hover:file:bg-white/20 cursor-pointer"
+                                        className="w-full bg-black/20 border border-white/10 rounded-2xl p-2 text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-white/10 file:text-white hover:file:bg-white/20 cursor-pointer min-h-[48px]"
                                     />
                                 </div>
                             </div>
@@ -234,27 +281,30 @@ const ValidationModal = ({ task, isOpen, onClose, onValidated }: ValidationModal
                             <p className="text-center text-slate-400 text-xs uppercase font-bold tracking-widest mb-2">Qual seu veredito?</p>
                         </div>
                     )}
+                </div>
 
-                    {/* Actions */}
-                    <div className="grid grid-cols-2 gap-3 mt-auto">
+                {/* Footer actions (sticky, thumb-zone, native-like) */}
+                <div className="px-5 md:px-6 pt-3 pb-4 border-t border-white/5 bg-[#1A1040]/95 backdrop-blur-md">
+                    <div className="grid grid-cols-2 gap-3">
                         {!isFalseFlow ? (
                             <>
                                 <button
+                                    ref={initialFocusRef}
                                     onClick={() => handleVote(true)}
                                     disabled={voting}
-                                    className="bg-green-600 hover:bg-green-500 text-white font-bold py-3 rounded-xl transition-all shadow-lg hover:shadow-green-500/20 disabled:opacity-50 flex flex-col items-center justify-center gap-1 active:scale-95"
+                                    className="min-h-[52px] bg-green-600 hover:bg-green-500 text-white font-black rounded-2xl transition-all shadow-lg hover:shadow-green-500/20 disabled:opacity-50 active:scale-[0.98] flex items-center justify-center gap-2"
                                 >
                                     {voting ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle className="w-5 h-5" />}
-                                    <span className="text-xs">VERDADEIRO</span>
+                                    <span className="text-xs tracking-wide">VERDADEIRO</span>
                                 </button>
 
                                 <button
-                                    onClick={() => handleVote(false)} // Triggers flow
+                                    onClick={() => handleVote(false)}
                                     disabled={voting}
-                                    className="bg-red-600 hover:bg-red-500 text-white font-bold py-3 rounded-xl transition-all shadow-lg hover:shadow-red-500/20 disabled:opacity-50 flex flex-col items-center justify-center gap-1 active:scale-95"
+                                    className="min-h-[52px] bg-red-600 hover:bg-red-500 text-white font-black rounded-2xl transition-all shadow-lg hover:shadow-red-500/20 disabled:opacity-50 active:scale-[0.98] flex items-center justify-center gap-2"
                                 >
                                     <XCircle className="w-5 h-5" />
-                                    <span className="text-xs">FAKE NEWS</span>
+                                    <span className="text-xs tracking-wide">FALSO</span>
                                 </button>
                             </>
                         ) : (
@@ -262,18 +312,18 @@ const ValidationModal = ({ task, isOpen, onClose, onValidated }: ValidationModal
                                 <button
                                     onClick={() => setIsFalseFlow(false)}
                                     disabled={voting}
-                                    className="bg-white/5 hover:bg-white/10 text-slate-300 font-bold py-3 rounded-xl transition-all flex flex-col items-center justify-center gap-1 active:scale-95 col-span-1"
+                                    className="min-h-[52px] bg-white/5 hover:bg-white/10 text-slate-200 font-black rounded-2xl transition-all active:scale-[0.98]"
                                 >
-                                    <span className="text-xs">VOLTAR</span>
+                                    <span className="text-xs tracking-wide">VOLTAR</span>
                                 </button>
 
                                 <button
-                                    onClick={() => handleVote(false)} // Confirm actual vote
+                                    onClick={() => handleVote(false)}
                                     disabled={voting}
-                                    className="bg-red-600 hover:bg-red-500 text-white font-bold py-3 rounded-xl transition-all shadow-lg hover:shadow-red-500/20 disabled:opacity-50 flex flex-col items-center justify-center gap-1 active:scale-95 col-span-1"
+                                    className="min-h-[52px] bg-red-600 hover:bg-red-500 text-white font-black rounded-2xl transition-all shadow-lg hover:shadow-red-500/20 disabled:opacity-50 active:scale-[0.98] flex items-center justify-center gap-2"
                                 >
                                     {voting ? <Loader2 className="w-5 h-5 animate-spin" /> : <XCircle className="w-5 h-5" />}
-                                    <span className="text-xs">CONFIRMAR FALSO</span>
+                                    <span className="text-xs tracking-wide">CONFIRMAR</span>
                                 </button>
                             </>
                         )}
@@ -283,8 +333,5 @@ const ValidationModal = ({ task, isOpen, onClose, onValidated }: ValidationModal
         </div>
     );
 };
-
-// Add AlertIcon and missing ones if needed
-import { AlertCircle } from 'lucide-react';
 
 export default ValidationModal;

@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import AppHeader from '../components/AppHeader';
+import BottomNav from '../components/BottomNav';
 
 interface UserProfile {
     id: string;
@@ -129,7 +130,7 @@ const Profile = () => {
     }
 
     return (
-        <div className="min-h-screen bg-[#0F0529] text-white font-sans flex flex-col">
+        <div className="min-h-screen bg-[#0F0529] text-white font-sans flex flex-col pb-24">
             {/* Header with Logo */}
             <AppHeader
                 title="Meu Perfil"
@@ -275,8 +276,8 @@ const Profile = () => {
                         </div>
                     </div>
                 )}
-
             </div>
+            <BottomNav />
         </div>
     );
 };

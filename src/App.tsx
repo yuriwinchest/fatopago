@@ -11,13 +11,14 @@ import ValidationTask from './pages/ValidationTask';
 import Ranking from './pages/Ranking';
 import Profile from './pages/Profile';
 import Plans from './pages/Plans';
+import LandingPage from './pages/LandingPage';
 import './App.css';
 
 function App() {
     return (
         <Router>
             <Routes>
-                <Route path="/" element={<Login />} />
+                <Route path="/" element={<LandingPage />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
                 <Route path="/forgot-password" element={<ForgotPassword />} />

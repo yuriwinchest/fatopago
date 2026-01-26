@@ -1,7 +1,7 @@
-
 const { NodeSSH } = require('node-ssh');
 const ssh = new NodeSSH();
 const path = require('path');
+const fs = require('fs');
 
 const host = process.env.VPS_HOST;
 const username = process.env.VPS_USER;
@@ -17,10 +17,17 @@ if (!privateKey && !password) {
 }
 
 const appDir = process.env.VPS_APP_DIR || '/var/www/fatopago';
-const localSrc = path.join(__dirname, '../src');
-const remoteSrc = `${appDir}/src`;
+const localDist = path.join(__dirname, '../dist');
+const remoteDist = `${appDir}/dist`;
+const localScripts = path.join(__dirname, '..', 'scripts');
+const remoteScripts = `${appDir}/scripts`;
 
 async function deployUpdate() {
+    console.log(`Checking local build at ${localDist}...`);
+    if (!fs.existsSync(localDist)) {
+        throw new Error('Pasta dist não encontrada. Execute "npm run build" antes do deploy.');
+    }
+
     console.log(`Connecting to ${host}...`);
     try {
         await ssh.connect({
@@ -32,45 +39,49 @@ async function deployUpdate() {
         });
         console.log('Connected!');
 
-        console.log('Uploading updated source code...');
-        // Upload entire src directory recursively
-        await ssh.putDirectory(localSrc, remoteSrc, {
-            recursive: true,
-            concurrency: 10,
-            validate: (itemPath) => {
-                const baseName = path.basename(itemPath);
-                return baseName !== 'node_modules' && !baseName.startsWith('.');
-            }
-        });
+        console.log('Cleaning remote dist folder...');
+        await ssh.execCommand(`rm -rf ${remoteDist}`);
+        await ssh.execCommand(`mkdir -p ${remoteDist}`);
 
-        console.log('Uploading public directory...');
-        const localPublic = path.join(__dirname, '../public');
-        const remotePublic = `${appDir}/public`;
-        await ssh.putDirectory(localPublic, remotePublic, {
+        console.log('Uploading local build (dist) to VPS...');
+        await ssh.putDirectory(localDist, remoteDist, {
             recursive: true,
             concurrency: 10
         });
-        console.log('Assets uploaded.');
 
-        console.log('Rebuilding Application...');
-        const result = await ssh.execCommand('npm run build', {
-            cwd: appDir,
-            onStdout: (chunk) => process.stdout.write(chunk.toString()),
-            onStderr: (chunk) => process.stderr.write(chunk.toString())
-        });
+        console.log('Build uploaded to VPS.');
 
-        if (result.code === 0) {
-            console.log('\n✅ Update Deployed Successfully!');
-            console.log('Restarting fatopago service...');
-            try {
-                const restart = await ssh.execCommand('pm2 restart fatopago');
-                console.log(restart.stdout);
-                console.log(restart.stderr);
-            } catch (err) {
-                console.error('Restart failed:', err);
-            }
-        } else {
-            console.error('\n❌ Build Failed.');
+        console.log('Uploading required scripts to VPS...');
+        try {
+            await ssh.execCommand(`mkdir -p ${remoteScripts}`);
+            await ssh.putFile(path.join(localScripts, 'news_ingest.cjs'), `${remoteScripts}/news_ingest.cjs`);
+            await ssh.putFile(path.join(localScripts, 'live_news_worker.cjs'), `${remoteScripts}/live_news_worker.cjs`);
+        } catch (err) {
+            console.error('Script upload failed:', err);
+        }
+
+        // Optional: Update package.json/etc if needed for PM2 behavior, 
+        // but for static files, dist is usually enough.
+        console.log('Uploading root package.json for PM2 references...');
+        try {
+            await ssh.putFile(path.join(__dirname, '../package.json'), `${appDir}/package.json`);
+        } catch (err) { }
+
+        console.log('\n✅ Update Deployed Successfully!');
+        console.log('Restarting fatopago service (PM2)...');
+        try {
+            // Some setups use PM2 to serve the dist folder or run a node server
+            const restart = await ssh.execCommand('pm2 restart fatopago || pm2 start "npx serve -s dist" --name fatopago', { cwd: appDir });
+            console.log(restart.stdout || 'Service restarted');
+        } catch (err) {
+            console.error('Restart failed:', err);
+        }
+
+        // Restart or start news worker (polls RSS every minute)
+        try {
+            await ssh.execCommand('pm2 restart fatopago-news || pm2 start "node scripts/live_news_worker.cjs" --name fatopago-news --time', { cwd: appDir });
+        } catch (err) {
+            // ignore
         }
 
         ssh.dispose();
