@@ -6,6 +6,7 @@ export interface UserProfile {
     city: string;
     state: string;
     affiliate_code: string;
+    email?: string;
 }
 
 export interface NewsTask {

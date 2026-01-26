@@ -1,0 +1,2 @@
+-- Placeholder file to match remote migration history.
+-- The corresponding migration was applied on remote before this repo tracked migrations.

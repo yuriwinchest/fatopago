@@ -1,6 +1,4 @@
-
-import { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { useState } from 'react';
 import {
     ArrowUpRight,
     ArrowDownLeft,
@@ -10,62 +8,19 @@ import {
     Download
 } from 'lucide-react';
 import WithdrawalModal from '../components/WithdrawalModal';
-import AppHeader from '../components/AppHeader';
-import BottomNav from '../components/BottomNav';
-
-interface Transaction {
-    id: string;
-    amount: number;
-    type: 'credit' | 'debit';
-    description: string;
-    created_at: string;
-    status: 'completed' | 'pending' | 'failed';
-}
+import { AppLayout } from '../layouts/AppLayout';
+import { useFinancial } from '../hooks/useFinancial';
 
 const Financeiro = () => {
-    const [balance, setBalance] = useState(0);
-    const [transactions, setTransactions] = useState<Transaction[]>([]);
-    const [filter, setFilter] = useState<'all' | 'credit' | 'debit'>('all');
+    const {
+        balance,
+        filteredTransactions,
+        filter,
+        setFilter,
+        triggerRefresh
+    } = useFinancial();
+
     const [showWithdrawModal, setShowWithdrawModal] = useState(false);
-    const [refreshTrigger, setRefreshTrigger] = useState(0);
-
-    useEffect(() => {
-        const fetchFinancialData = async () => {
-            try {
-                const { data: { session } } = await supabase.auth.getSession();
-                const user = session?.user;
-                if (!user) return;
-
-                // 1. Get Balance
-                const { data: profile } = await supabase
-                    .from('profiles')
-                    .select('current_balance')
-                    .eq('id', user.id)
-                    .single();
-
-                if (profile) setBalance(profile.current_balance || 0);
-
-                // 2. Get Transactions
-                const { data: txs } = await supabase
-                    .from('transactions')
-                    .select('*')
-                    .eq('user_id', user.id)
-                    .order('created_at', { ascending: false });
-
-                if (txs) {
-                    setTransactions(txs as any);
-                } else {
-                    // If no transactions found (new user), maybe show empty state
-                    setTransactions([]);
-                }
-
-            } catch (error) {
-                console.error('Error fetching finance:', error);
-            }
-        };
-
-        fetchFinancialData();
-    }, [refreshTrigger]);
 
     const formatCurrency = (val: number) => {
         return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
@@ -80,19 +35,12 @@ const Financeiro = () => {
         });
     };
 
-    const filteredTransactions = filter === 'all'
-        ? transactions
-        : transactions.filter(t => t.type === filter);
-
     return (
-        <div className="min-h-screen bg-[#0F0529] text-white font-sans flex flex-col pb-24">
-            {/* Header with Logo */}
-            <AppHeader
-                title="Minha Carteira"
-                showBackButton={true}
-            />
-
-            <div className="flex-1 overflow-y-auto pb-safe-area-bottom p-6">
+        <AppLayout
+            title="Minha Carteira"
+            showBackButton={true}
+        >
+            <div className="flex-1 pb-safe-area-bottom">
 
                 {/* Balance Card */}
                 <div className="bg-gradient-to-br from-[#6D28D9] to-[#4C1D95] rounded-3xl p-6 relative overflow-hidden shadow-2xl mb-8 border border-white/10">
@@ -123,9 +71,9 @@ const Financeiro = () => {
                 </div>
 
                 {/* Transactions Section */}
-                <div>
+                <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                     <div className="flex items-center justify-between mb-4">
-                        <h3 className="font-bold text-lg">Histórico</h3>
+                        <h3 className="font-bold text-lg text-white">Histórico</h3>
                         <div className="flex bg-[#1A1040] rounded-lg p-1 border border-white/5">
                             <button
                                 onClick={() => setFilter('all')}
@@ -151,7 +99,7 @@ const Financeiro = () => {
                     <div className="space-y-3">
                         {filteredTransactions.length > 0 ? (
                             filteredTransactions.map(tx => (
-                                <div key={tx.id} className="bg-[#1A1040] rounded-2xl p-4 flex items-center justify-between border border-white/5">
+                                <div key={tx.id} className="bg-[#1A1040] rounded-2xl p-4 flex items-center justify-between border border-white/5 hover:border-purple-500/30 transition-colors">
                                     <div className="flex items-center gap-4">
                                         <div className={`w-10 h-10 rounded-full flex items-center justify-center border ${tx.type === 'credit'
                                             ? 'bg-green-500/10 border-green-500/30 text-green-400'
@@ -186,17 +134,14 @@ const Financeiro = () => {
                     </div>
                 </div>
             </div>
+
             <WithdrawalModal
                 isOpen={showWithdrawModal}
                 onClose={() => setShowWithdrawModal(false)}
                 currentBalance={balance}
-                onSuccess={() => {
-                    // Refresh data
-                    setRefreshTrigger(prev => prev + 1);
-                }}
+                onSuccess={triggerRefresh}
             />
-            <BottomNav />
-        </div>
+        </AppLayout>
     );
 }
 

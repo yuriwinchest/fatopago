@@ -165,7 +165,7 @@ const Plans = () => {
 
             {/* Status Indicator */}
             {planStatus && (
-                <div className="text-center -mt-4 mb-4 relative z-20">
+                <div className="text-center mt-4 mb-4 relative z-20">
                     <div className="inline-block bg-white/10 px-4 py-1 rounded-full border border-white/5">
                         <p className="text-xs text-purple-200">
                             Último ciclo: <span className="font-bold text-white uppercase">{planStatus.lastPlan}</span> ({new Date(planStatus.date || '').toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})
@@ -175,7 +175,7 @@ const Plans = () => {
             )}
 
             {/* Plans Grid */}
-            <div className="px-6 pb-12 flex flex-col gap-6 max-w-lg mx-auto">
+            <div className="px-6 pb-12 flex flex-col gap-6 max-w-lg mx-auto mt-8">
                 {plans.map((plan) => {
                     const locked = isPlanLocked(plan.id);
 

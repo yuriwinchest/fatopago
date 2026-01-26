@@ -23,7 +23,8 @@ O deploy é realizado através de um script Node.js (`scripts/deploy_quick.cjs`)
     - Reiniciar o processo via PM2 (`pm2 restart fatopago`).
 
 ### Dados da VPS:
-- **Host**: `72.60.53.191`
+- **Domínio (Principal)**: `https://fatopago.com`
+- **Host (IP)**: `72.60.53.191`
 - **Usuário**: `root`
 - **Senha**: `Horapiaui@2026`
 - **Diretório da Aplicação**: `/var/www/fatopago`

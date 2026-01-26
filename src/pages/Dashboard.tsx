@@ -1,89 +1,18 @@
-import { useState, useEffect } from 'react';
-import {
-    Users,
-    Trophy,
-    Wallet,
-    Copy,
-    CheckCircle,
-    Loader2,
-    Briefcase
-} from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { useState } from 'react';
+import { Users, Trophy, Wallet, Copy, CheckCircle, Loader2, Briefcase } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { UserProfile, NewsTask } from '../types';
+import { NewsTask } from '../types';
 import ValidationModal from '../components/ValidationModal';
-import { MOCK_NEWS } from '../data/mockNews';
 import { NewsCarousel } from '../components/NewsCarousel';
-import AppHeader from '../components/AppHeader';
-import BottomNav from '../components/BottomNav';
-
-const withTimeout = (promise: Promise<any>, ms: number, message: string): Promise<any> => {
-    let timeoutId: ReturnType<typeof setTimeout> | undefined;
-    const timeoutPromise = new Promise<never>((_resolve, reject) => {
-        timeoutId = setTimeout(() => reject(new Error(message)), ms);
-    });
-    return Promise.race([promise, timeoutPromise]).finally(() => {
-        if (timeoutId) clearTimeout(timeoutId);
-    }) as Promise<any>;
-};
+import { AppLayout } from '../layouts/AppLayout';
+import { useDashboard } from '../hooks/useDashboard';
 
 const Dashboard = () => {
     const navigate = useNavigate();
-    const [loading, setLoading] = useState(true);
-    const [profile, setProfile] = useState<UserProfile | null>(null);
-    const [tasks, setTasks] = useState<NewsTask[]>([]);
+    const { profile, tasks, setTasks, loading } = useDashboard();
+
     const [selectedTask, setSelectedTask] = useState<NewsTask | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
-
-    const loadDashboard = async () => {
-        try {
-            const { data: { session }, error: sessionError } = await withTimeout(
-                supabase.auth.getSession(),
-                8000,
-                'Tempo excedido ao validar sessão.'
-            );
-
-            if (sessionError || !session?.user) {
-                navigate('/login');
-                return;
-            }
-
-            const user = session.user;
-            const { data: profileData } = await withTimeout(
-                supabase.from('profiles').select('*').eq('id', user.id).single(),
-                12000,
-                'Erro ao carregar perfil.'
-            );
-
-            setProfile(profileData);
-
-            const { data: validations } = await supabase.from('validations').select('task_id').eq('user_id', user.id);
-            const validatedTaskIds = validations?.map((v: any) => v.task_id) || [];
-
-            const { data: tasksData } = await withTimeout(
-                supabase.from('news_tasks').select('*').order('created_at', { ascending: false }).limit(50),
-                12000,
-                'Erro ao carregar notícias.'
-            );
-
-            const baseTasks = (tasksData || []) as NewsTask[];
-            let finalTasks = baseTasks.filter((t) => !validatedTaskIds.includes(t.id));
-
-            if (finalTasks.length === 0) {
-                finalTasks = MOCK_NEWS;
-            }
-
-            setTasks(finalTasks);
-        } catch (error) {
-            console.error('Error:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        loadDashboard();
-    }, [navigate]);
 
     const handleOpenValidation = (task: NewsTask) => {
         setSelectedTask(task);
@@ -96,11 +25,6 @@ const Dashboard = () => {
         }
         setIsModalOpen(false);
         setSelectedTask(null);
-    };
-
-    const handleLogout = async () => {
-        await supabase.auth.signOut();
-        navigate('/login');
     };
 
     const formatCurrency = (val: number) => {
@@ -120,16 +44,17 @@ const Dashboard = () => {
         );
     }
 
-    return (
-        <div className="min-h-screen bg-[#0F0529] text-white font-sans pb-24 relative overflow-x-hidden">
-            <AppHeader
-                title="Central de Validação"
-                subtitle="Sua jornada contra a desinformação"
-                showLogout={true}
-                onLogout={handleLogout}
-            />
+    const reputationScore = profile?.reputation_score || 0;
+    const reputationLevel = reputationScore > 500 ? 'Diamante' : (reputationScore > 100 ? 'Ouro' : 'Bronze');
+    const reputationPercent = reputationScore % 100;
 
-            <div className="max-w-md mx-auto px-6 space-y-8 mt-6">
+    return (
+        <AppLayout
+            title="Central de Validação"
+            subtitle="Sua jornada contra a desinformação"
+            showLogout={true}
+        >
+            <div className="space-y-8">
                 {/* Balance Card */}
                 <div
                     className="group bg-gradient-to-br from-[#6D28D9] to-[#4C1D95] rounded-[32px] p-8 relative overflow-hidden shadow-2xl border border-white/10 cursor-pointer hover:scale-[1.02] transition-all"
@@ -147,11 +72,11 @@ const Dashboard = () => {
                         </div>
                         <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10">
                             <div className="flex justify-between items-center mb-2 text-[10px] font-bold text-white uppercase">
-                                <span>🏆 Nível: {profile?.reputation_score ? (profile.reputation_score > 500 ? 'Diamante' : (profile.reputation_score > 100 ? 'Ouro' : 'Bronze')) : 'Bronze'}</span>
-                                <span>{(profile?.reputation_score || 0) % 100}%</span>
+                                <span>🏆 Nível: {reputationLevel}</span>
+                                <span>{reputationPercent}%</span>
                             </div>
                             <div className="h-1.5 w-full bg-black/20 rounded-full overflow-hidden">
-                                <div className="h-full bg-white rounded-full" style={{ width: `${(profile?.reputation_score || 0) % 100}%` }} />
+                                <div className="h-full bg-white rounded-full" style={{ width: `${reputationPercent}%` }} />
                             </div>
                         </div>
                     </div>
@@ -191,7 +116,7 @@ const Dashboard = () => {
                             <Trophy className="w-5 h-5 text-purple-400" />
                         </div>
                         <div>
-                            <p className="text-2xl font-black text-white">{profile?.reputation_score || 0}</p>
+                            <p className="text-2xl font-black text-white">{reputationScore}</p>
                             <p className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Ranking XP</p>
                         </div>
                     </div>
@@ -218,8 +143,6 @@ const Dashboard = () => {
                 </div>
             </div>
 
-            <BottomNav />
-
             {selectedTask && (
                 <ValidationModal
                     task={selectedTask}
@@ -228,7 +151,7 @@ const Dashboard = () => {
                     onValidated={handleValidationComplete}
                 />
             )}
-        </div>
+        </AppLayout>
     );
 };
 
