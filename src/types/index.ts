@@ -7,6 +7,9 @@ export interface UserProfile {
     state: string;
     affiliate_code: string;
     email?: string;
+    plan_status?: 'none' | 'active' | 'expired';
+    referral_code?: string;
+    referral_active?: boolean;
 }
 
 export interface NewsTask {

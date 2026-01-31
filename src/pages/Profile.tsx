@@ -155,6 +155,62 @@ const Profile = () => {
                             </div>
                         </div>
 
+                        {/* Referral Section */}
+                        <div className={`border rounded-2xl p-4 transition-all ${profile?.referral_active
+                            ? 'bg-gradient-to-br from-purple-900/40 to-indigo-900/40 border-purple-500/30'
+                            : 'bg-[#1A1040] border-white/5 opacity-75'
+                            }`}>
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className={`font-bold text-sm uppercase tracking-wider ${profile?.referral_active ? 'text-purple-300' : 'text-slate-500'}`}>
+                                    Indicação & Ganhos
+                                </h3>
+                                {profile?.referral_active ? (
+                                    <div className="bg-green-500/20 text-green-400 px-2 py-0.5 rounded text-[10px] font-bold border border-green-500/30">
+                                        ATIVO
+                                    </div>
+                                ) : (
+                                    <div className="bg-slate-700/50 text-slate-400 px-2 py-0.5 rounded text-[10px] font-bold flex items-center gap-1">
+                                        <XCircle className="w-3 h-3" /> BLOQUEADO
+                                    </div>
+                                )}
+                            </div>
+
+                            {profile?.referral_active ? (
+                                <div className="space-y-4">
+                                    <div className="bg-[#0F0529] rounded-xl p-3 border border-purple-500/20">
+                                        <p className="text-xs text-slate-400 mb-1 font-bold">Seu Código de Indicação</p>
+                                        <div className="flex items-center justify-between gap-2">
+                                            <code className="text-xl font-mono font-bold text-white tracking-widest">
+                                                {profile?.referral_code || '---'}
+                                            </code>
+                                            <button
+                                                onClick={() => {
+                                                    navigator.clipboard.writeText(profile?.referral_code || '');
+                                                    // Optional: Toast notification
+                                                }}
+                                                className="p-2 hover:bg-white/10 rounded-lg transition-colors text-purple-400"
+                                                title="Copiar Código"
+                                            >
+                                                <div className="w-4 h-4 font-bold">COPIAR</div>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <p className="text-xs text-slate-400">
+                                        Compartilhe este código e ganhe comissões por cada novo validador ativo.
+                                    </p>
+                                </div>
+                            ) : (
+                                <div className="text-center py-2">
+                                    <p className="text-sm text-slate-300 font-medium mb-2">
+                                        Desbloqueie seu código de indicação
+                                    </p>
+                                    <p className="text-xs text-slate-500 mb-0">
+                                        Adquira um plano para começar a indicar amigos e ganhar comissões em dinheiro.
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+
                         <div className="bg-[#1A1040] border border-white/5 rounded-2xl p-4">
                             <h3 className="font-bold text-white mb-4 text-sm uppercase tracking-wider">Segurança</h3>
                             <button className="w-full bg-[#0F0529] border border-white/10 hover:border-purple-500/50 rounded-xl p-3 text-left transition-colors flex justify-between items-center group">
