@@ -102,6 +102,7 @@ export const NewsCarousel: React.FC<NewsCarouselProps> = ({ tasks, onValidate, i
     }
 
     const currentTask = tasks[currentIndex];
+    const rewardValue = Number(currentTask?.content?.reward ?? 0);
 
     return (
         <div className="w-full">
@@ -113,6 +114,8 @@ export const NewsCarousel: React.FC<NewsCarouselProps> = ({ tasks, onValidate, i
                 {tasks.length > 1 && (
                     <div className="flex bg-black/20 rounded-lg p-1 border border-white/10 backdrop-blur-sm">
                         <button
+                            type="button"
+                            aria-label="Anterior"
                             onClick={prevTask}
                             disabled={currentIndex === 0}
                             className={`p-1 rounded-md transition-colors ${currentIndex === 0 ? 'text-slate-600 cursor-not-allowed' : 'text-white hover:bg-white/10'}`}
@@ -123,6 +126,8 @@ export const NewsCarousel: React.FC<NewsCarouselProps> = ({ tasks, onValidate, i
                             {currentIndex + 1}/{tasks.length}
                         </span>
                         <button
+                            type="button"
+                            aria-label="Próximo"
                             onClick={nextTask}
                             disabled={currentIndex === tasks.length - 1}
                             className={`p-1 rounded-md transition-colors ${currentIndex === tasks.length - 1 ? 'text-slate-600 cursor-not-allowed' : 'text-white hover:bg-white/10'}`}
@@ -172,7 +177,7 @@ export const NewsCarousel: React.FC<NewsCarouselProps> = ({ tasks, onValidate, i
                             </span>
                         )}
                         <span className="px-2 py-1 rounded-md bg-purple-600/90 backdrop-blur-md border border-purple-400/20 text-[10px] font-bold text-white uppercase tracking-wider shadow-lg">
-                            + R$ {currentTask.content.reward.toFixed(2)}
+                            + R$ {rewardValue.toFixed(2)}
                         </span>
                     </div>
                 </div>
@@ -195,6 +200,7 @@ export const NewsCarousel: React.FC<NewsCarouselProps> = ({ tasks, onValidate, i
                     </p>
 
                     <button
+                        type="button"
                         onClick={(e) => {
                             e.stopPropagation();
                             onValidate(currentTask);

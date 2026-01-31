@@ -1,5 +1,5 @@
 // Navigation component for authenticated pages
-import { Home, Newspaper, CheckCircle, Wallet, User } from 'lucide-react';
+import { Home, CheckCircle, User, AlertTriangle, CreditCard } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 const BottomNav = () => {
@@ -10,14 +10,14 @@ const BottomNav = () => {
 
     const navItems = [
         { icon: <Home className="w-6 h-6" />, label: 'Home', path: '/dashboard' },
-        { icon: <Newspaper className="w-6 h-6" />, label: 'Mural', path: '/validation' },
+        { icon: <CreditCard className="w-6 h-6" />, label: 'Planos', path: '/plans' },
         {
             icon: <CheckCircle className="w-8 h-8 text-white" />,
             label: 'Validar',
             path: '/validation',
             isCenter: true
         },
-        { icon: <Wallet className="w-6 h-6" />, label: 'Financeiro', path: '/financeiro' },
+        { icon: <AlertTriangle className="w-6 h-6" />, label: 'Falsas', path: '/noticias-falsas' },
         { icon: <User className="w-6 h-6" />, label: 'Perfil', path: '/profile' }
     ];
 

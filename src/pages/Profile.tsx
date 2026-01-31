@@ -145,12 +145,12 @@ const Profile = () => {
                             <h3 className="font-bold text-white mb-4 text-sm uppercase tracking-wider">Conta</h3>
                             <div className="space-y-4">
                                 <div>
-                                    <label className="block text-xs text-slate-400 mb-1 font-bold">Nome Completo</label>
-                                    <input value={profile?.name || ''} disabled className="w-full bg-[#0F0529] border border-white/10 rounded-xl px-4 py-3 text-sm text-slate-300 font-medium" />
+                                    <label htmlFor="profile-name" className="block text-xs text-slate-400 mb-1 font-bold">Nome Completo</label>
+                                    <input id="profile-name" value={profile?.name || ''} disabled className="w-full bg-[#0F0529] border border-white/10 rounded-xl px-4 py-3 text-sm text-slate-300 font-medium" />
                                 </div>
                                 <div>
-                                    <label className="block text-xs text-slate-400 mb-1 font-bold">E-mail</label>
-                                    <input value={profile?.email || ''} disabled className="w-full bg-[#0F0529] border border-white/10 rounded-xl px-4 py-3 text-sm text-slate-300 font-medium" />
+                                    <label htmlFor="profile-email" className="block text-xs text-slate-400 mb-1 font-bold">E-mail</label>
+                                    <input id="profile-email" value={profile?.email || ''} disabled className="w-full bg-[#0F0529] border border-white/10 rounded-xl px-4 py-3 text-sm text-slate-300 font-medium" />
                                 </div>
                             </div>
                         </div>

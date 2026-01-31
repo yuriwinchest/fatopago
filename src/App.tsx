@@ -12,25 +12,31 @@ import Ranking from './pages/Ranking';
 import Profile from './pages/Profile';
 import Plans from './pages/Plans';
 import LandingPage from './pages/LandingPage';
+import FakeNews from './pages/FakeNews';
+import { ProtectedRoute } from './components/ProtectedRoute';
 import './App.css';
 
 function App() {
     return (
         <Router>
             <Routes>
+                {/* Rotas Públicas */}
                 <Route path="/" element={<LandingPage />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
                 <Route path="/forgot-password" element={<ForgotPassword />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/how-it-works" element={<HowItWorks />} />
-                <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/validation" element={<ValidationHub />} />
-                <Route path="/validation/task/:id" element={<ValidationTask />} />
-                <Route path="/ranking" element={<Ranking />} />
-                <Route path="/financeiro" element={<Financeiro />} />
-                <Route path="/profile" element={<Profile />} />
-                <Route path="/plans" element={<Plans />} />
+                <Route path="/noticias-falsas" element={<FakeNews />} />
+
+                {/* Rotas Protegidas - Requerem Autenticação */}
+                <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+                <Route path="/validation" element={<ProtectedRoute><ValidationHub /></ProtectedRoute>} />
+                <Route path="/validation/task/:id" element={<ProtectedRoute><ValidationTask /></ProtectedRoute>} />
+                <Route path="/ranking" element={<ProtectedRoute><Ranking /></ProtectedRoute>} />
+                <Route path="/financeiro" element={<ProtectedRoute><Financeiro /></ProtectedRoute>} />
+                <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+                <Route path="/plans" element={<ProtectedRoute><Plans /></ProtectedRoute>} />
             </Routes>
         </Router>
     );

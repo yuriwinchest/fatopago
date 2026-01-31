@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-var-requires */
 
 const { NodeSSH } = require('node-ssh');
 const ssh = new NodeSSH();
@@ -10,7 +11,7 @@ const password = 'Horapiaui@2026';
 
 const localScriptPath = path.join(__dirname, 'check_supabase_connection.cjs');
 const remoteScriptPath = '/var/www/fatopago/scripts/check_supabase_connection.cjs';
-const remoteEnvPath = '/var/www/fatopago/.env';
+
 
 async function verifyRemoteConnection() {
     console.log(`Connecting to ${host}...`);

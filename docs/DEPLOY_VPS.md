@@ -29,6 +29,19 @@ npm run build
 
 O output fica em `dist/`.
 
+## IMPORTANTE (LIMPEZA DO BUILD E DA VPS)
+
+**SEMPRE LIMPE O `dist/` LOCAL E O DIRETÓRIO DA VPS ANTES DE ENVIAR O NOVO BUILD. ISSO EVITA CONFLITO DE ARQUIVOS ANTIGOS.**
+
+Exemplo de limpeza local + VPS:
+
+```bash
+rm -rf dist/
+npm run build
+sudo rm -rf /var/www/fatopago/*
+sudo rsync -a --delete dist/ /var/www/fatopago/
+```
+
 ## Servir com Nginx (recomendado)
 
 1) Copie o `dist/` para um diretório público:

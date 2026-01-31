@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import AppHeader from '../components/AppHeader';
 import BottomNav from '../components/BottomNav';
+import { CycleTimer } from '../components/CycleTimer';
 import { supabase } from '../lib/supabase';
 
 interface AppLayoutProps {
@@ -24,7 +25,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
 
     const handleLogout = async () => {
         await supabase.auth.signOut();
-        navigate('/login');
+        navigate('/');
     };
 
     return (
@@ -37,6 +38,8 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
                 onLogout={handleLogout}
                 className={headerClassName}
             />
+
+            <CycleTimer />
 
             <main className="max-w-md mx-auto px-6 mt-6">
                 {children}

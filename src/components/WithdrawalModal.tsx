@@ -97,6 +97,8 @@ const WithdrawalModal = ({ isOpen, onClose, currentBalance, onSuccess }: Withdra
             <div className="bg-[#1A1040] w-full max-w-md rounded-3xl border border-white/10 p-6 relative shadow-2xl animate-in fade-in zoom-in duration-200">
                 <button
                     onClick={onClose}
+                    title="Fechar"
+                    aria-label="Fechar"
                     className="absolute top-4 right-4 p-2 bg-white/5 rounded-full text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
                 >
                     <X className="w-5 h-5" />

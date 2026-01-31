@@ -1,30 +1,10 @@
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AlertCircle, CheckCircle, XCircle, Share2, Loader2, X } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-
-const withTimeout = (promise: Promise<any>, ms: number, message: string): Promise<any> => {
-    let timeoutId: ReturnType<typeof setTimeout> | undefined;
-    const timeoutPromise = new Promise<never>((_resolve, reject) => {
-        timeoutId = setTimeout(() => reject(new Error(message)), ms);
-    });
-    return Promise.race([promise, timeoutPromise]).finally(() => {
-        if (timeoutId) clearTimeout(timeoutId);
-    }) as Promise<any>;
-};
-
-interface NewsTask {
-    id: string;
-    content: {
-        title: string;
-        description: string;
-        reward: number;
-        category: string;
-        source: string;
-        difficulty: string;
-        image_url?: string;
-    };
-}
+import { getPlanAccessForCurrentUser, consumeActivePlanValidation } from '../lib/planService';
+import { NewsTask } from '../types';
 
 interface ValidationModalProps {
     task: NewsTask;
@@ -35,6 +15,7 @@ interface ValidationModalProps {
 
 // Main Component
 const ValidationModal = ({ task, isOpen, onClose, onValidated }: ValidationModalProps) => {
+    const navigate = useNavigate();
     const [voting, setVoting] = useState(false);
     const [showSuccess, setShowSuccess] = useState(false);
 
@@ -45,6 +26,8 @@ const ValidationModal = ({ task, isOpen, onClose, onValidated }: ValidationModal
     // const [proofFile, setProofFile] = useState<File | null>(null);
 
     if (!isOpen) return null;
+
+    const rewardValue = Number(task.content.reward ?? 0);
 
     const sheetRef = useRef<HTMLDivElement | null>(null);
     const initialFocusRef = useRef<HTMLButtonElement | null>(null);
@@ -69,9 +52,8 @@ const ValidationModal = ({ task, isOpen, onClose, onValidated }: ValidationModal
             return;
         }
 
-        // If false flow, validate inputs
         if (verdict === false && isFalseFlow) {
-            if (justification.length < 10) {
+            if (!justification || justification.trim().length < 10) {
                 alert("Por favor, justifique com pelo menos 10 caracteres.");
                 return;
             }
@@ -80,65 +62,26 @@ const ValidationModal = ({ task, isOpen, onClose, onValidated }: ValidationModal
         setVoting(true);
 
         try {
-            // 1. Get User
-            const { data: { session }, error: sessionError } = await withTimeout(
-                supabase.auth.getSession(),
-                8000,
-                "Tempo excedido ao validar sessão. Tente novamente."
-            );
-            if (sessionError) throw sessionError;
-            const user = session?.user;
-            if (!user) throw new Error("Usuário não autenticado");
-
-            // 2. Upload File if specific (Optional for now as Supabase Storage setup is unknown)
-            // For now, we will skip actual file upload to bucket and focus on logic,
-            // or we could assume a bucket exists. To avoid breakage, we won't upload file yet 
-            // but we will simulate it.
-
-            // 3. Insert Validation
-            const { error: insertError } = await supabase.from('validations').insert({
-                task_id: task.id,
-                user_id: user.id,
-                verdict: verdict,
-                // Assuming schema might accept these JSON/Text fields, if not they will be ignored or error.
-                // Since I can't migrate schema effortlessly right now, I will try to save.
-                // If it fails, I'll fallback to basic validation.
-                justification: verdict ? null : justification,
-                proof_link: verdict ? null : proofLink
+            // Use RPC for secure, atomic validation
+            const { data, error } = await supabase.rpc('submit_validation', {
+                p_task_id: task.id,
+                p_verdict: verdict,
+                p_justification: verdict ? null : (justification.trim() || null),
+                p_proof_link: verdict ? null : (proofLink.trim() || null)
             });
 
-            if (insertError) {
-                // If schema doesn't support justification yet, DON'T silently drop the data for "FALSO".
-                if (insertError.message.includes("column")) {
-                    if (verdict === false) {
-                        throw new Error(
-                            "Seu app precisa de uma atualização no banco para salvar a justificativa do FALSO. (Campos: validations.justification e validations.proof_link)"
-                        );
-                    }
-
-                    // For TRUE votes we can safely fallback (no extra fields needed)
-                    const { error: fallbackError } = await supabase.from('validations').insert({
-                        task_id: task.id,
-                        user_id: user.id,
-                        verdict: verdict
-                    });
-                    if (fallbackError) throw fallbackError;
-                } else {
-                    throw insertError;
+            if (error) {
+                // Handle case where RPC might not be installed yet
+                if (error.message.includes("function public.submit_validation") || error.message.includes("does not exist")) {
+                    console.warn("RPC submit_validation not found, falling back to legacy insecure method.");
+                    await handleLegacyVote(verdict);
+                    return;
                 }
+                throw error;
             }
 
-            // 4. Update User Profile
-            const { data: profile } = await supabase.from('profiles').select('current_balance, reputation_score').eq('id', user.id).single();
-
-            if (profile) {
-                const newBalance = (profile.current_balance || 0) + task.content.reward;
-                const newScore = (profile.reputation_score || 0) + 10;
-
-                await supabase.from('profiles').update({
-                    current_balance: newBalance,
-                    reputation_score: newScore
-                }).eq('id', user.id);
+            if (data?.status === 'error') {
+                throw new Error(data.message);
             }
 
             // Success Animation
@@ -148,17 +91,76 @@ const ValidationModal = ({ task, isOpen, onClose, onValidated }: ValidationModal
             setTimeout(() => {
                 setShowSuccess(false);
                 setVoting(false);
-                setIsFalseFlow(false); // Reset
+                setIsFalseFlow(false);
                 setJustification("");
                 setProofLink("");
                 onValidated();
                 onClose();
             }, 1500);
 
-        } catch (err) {
+        } catch (err: any) {
             console.error("Error submitting vote:", err);
             setVoting(false);
-            alert("Erro ao enviar validação. Tente novamente.");
+            alert(err.message || "Erro ao enviar validação. Tente novamente.");
+        }
+    };
+
+    // Legacy fallback for backward compatibility
+    const handleLegacyVote = async (verdict: boolean) => {
+        try {
+            const planAccess = await getPlanAccessForCurrentUser();
+            if (planAccess.status !== 'ok') {
+                if (planAccess.status === 'no-session') navigate('/login');
+                else if (planAccess.status === 'no-plan' || planAccess.status === 'exhausted') {
+                    alert('Você não tem saldo para validar. Escolha um plano para continuar.');
+                    navigate('/plans?reason=no-balance&returnTo=/dashboard');
+                }
+                return;
+            }
+
+            const currentUserId = planAccess.userId;
+            const currentPlan = planAccess.plan;
+
+            const { error: insertError } = await supabase.from('validations').insert({
+                task_id: task.id,
+                user_id: currentUserId,
+                plan_purchase_id: currentPlan.id,
+                verdict: verdict,
+                justification: verdict ? null : justification,
+                proof_link: verdict ? null : proofLink
+            });
+
+            if (insertError) throw insertError;
+
+            // 3.1 Update plan usage (Legacy mode)
+            await consumeActivePlanValidation(currentPlan);
+
+            // Update profile balance (Insecure legacy mode)
+            const { data: profile } = await supabase.from('profiles')
+                .select('current_balance, reputation_score')
+                .eq('id', currentUserId)
+                .single();
+
+            if (profile) {
+                await supabase.from('profiles').update({
+                    current_balance: (profile.current_balance || 0) + rewardValue,
+                    reputation_score: (profile.reputation_score || 0) + 10
+                }).eq('id', currentUserId);
+            }
+
+            setShowSuccess(true);
+            setTimeout(() => {
+                setShowSuccess(false);
+                setVoting(false);
+                setIsFalseFlow(false);
+                onValidated();
+                onClose();
+            }, 1500);
+        } catch (err) {
+            console.error("Legacy vote error:", err);
+            alert("Erro na validação legada. Tente novamente.");
+        } finally {
+            setVoting(false);
         }
     };
 
@@ -212,7 +214,7 @@ const ValidationModal = ({ task, isOpen, onClose, onValidated }: ValidationModal
                             <CheckCircle className="w-10 h-10 text-green-500" />
                         </div>
                         <h2 className="text-2xl font-bold text-white">Validado!</h2>
-                        <p className="text-green-400 font-bold text-xl mt-1">+ R$ {task.content.reward.toFixed(2)}</p>
+                        <p className="text-green-400 font-bold text-xl mt-1">+ R$ {rewardValue.toFixed(2)}</p>
                     </div>
                 )}
 
@@ -244,8 +246,9 @@ const ValidationModal = ({ task, isOpen, onClose, onValidated }: ValidationModal
                             </div>
 
                             <div className="space-y-1.5">
-                                <label className="text-xs font-bold text-slate-400 uppercase">Justificativa <span className="text-red-400">*</span></label>
+                                <label htmlFor="validation-justification" className="text-xs font-bold text-slate-400 uppercase">Justificativa <span className="text-red-400">*</span></label>
                                 <textarea
+                                    id="validation-justification"
                                     value={justification}
                                     onChange={(e) => setJustification(e.target.value)}
                                     placeholder="Explique por que esta notícia é falsa..."
@@ -254,8 +257,9 @@ const ValidationModal = ({ task, isOpen, onClose, onValidated }: ValidationModal
                             </div>
 
                             <div className="space-y-1.5">
-                                <label className="text-xs font-bold text-slate-400 uppercase">Link de Prova</label>
+                                <label htmlFor="validation-proof-link" className="text-xs font-bold text-slate-400 uppercase">Link de Prova</label>
                                 <input
+                                    id="validation-proof-link"
                                     type="url"
                                     value={proofLink}
                                     onChange={(e) => setProofLink(e.target.value)}
@@ -265,11 +269,13 @@ const ValidationModal = ({ task, isOpen, onClose, onValidated }: ValidationModal
                             </div>
 
                             <div className="space-y-1.5">
-                                <label className="text-xs font-bold text-slate-400 uppercase">Anexar Foto (Opcional)</label>
+                                <label htmlFor="validation-file-upload" className="text-xs font-bold text-slate-400 uppercase">Anexar Foto (Opcional)</label>
                                 <div className="relative">
                                     <input
+                                        id="validation-file-upload"
                                         type="file"
                                         accept="image/*"
+                                        title="Anexar foto de prova"
                                         // onChange={(e) => setProofFile(e.target.files?.[0] || null)}
                                         className="w-full bg-black/20 border border-white/10 rounded-2xl p-2 text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-white/10 file:text-white hover:file:bg-white/20 cursor-pointer min-h-[48px]"
                                     />

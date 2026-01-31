@@ -25,6 +25,7 @@ const AppHeader = ({
             <div className="absolute top-4 left-4 right-4 flex justify-between items-center z-50">
                 {showBackButton ? (
                     <button
+                        title="Voltar"
                         onClick={() => navigate(-1)}
                         className="p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors text-white/80 hover:text-white backdrop-blur-sm"
                     >

@@ -12,6 +12,14 @@ const parser = new Parser({
   },
 });
 
+const USE_MEIO_NEWS_ONLY = true;
+const MEIO_NEWS_SOURCE = 'Meio News';
+const MEIO_NEWS_BASE = 'https://www.meionews.com';
+const FETCH_TIMEOUT_MS = 10_000;
+const MAX_RESPONSE_BYTES = 2_000_000;
+
+/*
+// TODO: Reativar multi-portais quando liberado.
 const FEEDS = [
   { url: 'https://g1.globo.com/rss/g1/', category: 'Brasil', source: 'G1' },
   { url: 'https://g1.globo.com/rss/g1/politica/', category: 'Política', source: 'G1' },
@@ -25,6 +33,7 @@ const FEEDS = [
   { url: 'https://www.cnnbrasil.com.br/feed/', category: 'Política', source: 'CNN Brasil' },
   { url: 'https://jovempan.com.br/feed', category: 'Brasil', source: 'Jovem Pan' },
 ];
+*/
 
 const CATEGORY_IMAGES = {
   Política: 'https://images.unsplash.com/photo-1541872703-74c59636a226?q=80&w=800',
@@ -50,6 +59,56 @@ function extractImage(item) {
   const match = String(content).match(/src="([^"]+)"/);
   if (match) return match[1];
   return null;
+}
+
+function extractMetaContent(html, key) {
+  const rgx = new RegExp(`<meta[^>]+property=["']${key}["'][^>]+content=["']([^"']+)["']`, 'i');
+  const match = String(html).match(rgx);
+  return match ? match[1] : '';
+}
+
+function extractMeioNewsLinks(html, limit) {
+  const urls = new Set();
+  const hrefRgx = /href=["']([^"']+)["']/gi;
+  let match;
+  while ((match = hrefRgx.exec(html)) !== null) {
+    const raw = match[1];
+    if (!raw || raw.startsWith('#') || raw.length < 5) continue;
+    if (raw.startsWith('mailto:') || raw.startsWith('javascript:')) continue;
+    
+    // Construct full URL
+    const url = raw.startsWith('http') ? raw : `${MEIO_NEWS_BASE}${raw}`;
+    
+    // Filter: Must be from Meio News
+    if (!url.startsWith(MEIO_NEWS_BASE)) continue;
+
+    const cleanUrl = url.split('#')[0].split('?')[0];
+
+    // Heuristic: Articles usually have slashes and are reasonably long.
+    // Exclude root category pages like /politica, /esportes
+    // A simple way is checking the number of slashes or length
+    const path = cleanUrl.replace(MEIO_NEWS_BASE, '');
+    if (path.length < 2) continue; // Home
+    
+    // Exclude common nav items if they don't look like deep links
+    // Articles often have  /categoria/titulo-slug
+    const segments = path.split('/').filter(Boolean);
+    if (segments.length < 2) continue; // Likely a category page like /politica
+
+    urls.add(cleanUrl);
+    if (urls.size >= limit * 2) break;
+  }
+  return Array.from(urls);
+}
+
+function categoryFromUrl(url) {
+  const path = url.toLowerCase();
+  if (path.includes('/economia')) return 'Economia';
+  if (path.includes('/internacional')) return 'Internacional';
+  if (path.includes('/politica') || path.includes('/eleicoes')) return 'Política';
+  if (path.includes('/esportes')) return 'Esportes';
+  if (path.includes('/entretemeio') || path.includes('/famosos') || path.includes('/novelas')) return 'Entretenimento';
+  return 'Brasil';
 }
 
 function pickDifficulty() {
@@ -111,6 +170,8 @@ function getSupabaseAdmin() {
 }
 
 async function fetchFeedXml(url) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   const res = await fetch(url, {
     headers: {
       'User-Agent':
@@ -118,13 +179,23 @@ async function fetchFeedXml(url) {
       'Accept': 'application/rss+xml, application/atom+xml, application/xml, text/xml;q=0.9, */*;q=0.8',
       'Accept-Encoding': 'gzip, deflate',
     },
+    signal: controller.signal,
   });
+  clearTimeout(timeoutId);
 
   if (!res.ok) {
     throw new Error(`HTTP ${res.status}`);
   }
 
+  const lenHeader = res.headers.get('content-length');
+  if (lenHeader && Number(lenHeader) > MAX_RESPONSE_BYTES) {
+    throw new Error(`Response too large: ${lenHeader} bytes`);
+  }
+
   const buf = Buffer.from(await res.arrayBuffer());
+  if (buf.length > MAX_RESPONSE_BYTES) {
+    throw new Error(`Response too large: ${buf.length} bytes`);
+  }
   const enc = (res.headers.get('content-encoding') || '').toLowerCase();
 
   const tryDecode = () => {
@@ -146,29 +217,106 @@ async function fetchFeedXml(url) {
     xmlBuf = buf;
   }
 
+  if (xmlBuf.length > MAX_RESPONSE_BYTES) {
+    throw new Error(`Decoded response too large: ${xmlBuf.length} bytes`);
+  }
+
   return xmlBuf.toString('utf8');
 }
+
+// --- CYCLE MANAGEMENT START ---
+async function getCurrentCycle(supabase) {
+  // Try to find the latest cycle info
+  const { data, error } = await supabase
+    .from('news_tasks')
+    .select('cycle_number, cycle_start_at')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single();
+
+  const now = new Date();
+  const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+
+  // If no data or first time setup
+  if (!data || !data.cycle_start_at) {
+    return { 
+      cycle_number: 1, 
+      cycle_start_at: now.toISOString() 
+    };
+  }
+
+  const startAt = new Date(data.cycle_start_at);
+  const diff = now.getTime() - startAt.getTime();
+
+  // Check if 24 hours have passed
+  if (diff >= ONE_DAY_MS) {
+    console.log(`[cycle] New cycle triggered! Old: #${data.cycle_number}, New: #${(data.cycle_number || 0) + 1}`);
+    return {
+      cycle_number: (data.cycle_number || 0) + 1,
+      cycle_start_at: now.toISOString()
+    };
+  }
+
+  // Still in current cycle
+  return {
+    cycle_number: data.cycle_number || 1,
+    cycle_start_at: data.cycle_start_at
+  };
+}
+// --- CYCLE MANAGEMENT END ---
 
 async function ingestOnce({ perFeedLimit = 20 } = {}) {
   const supabase = getSupabaseAdmin();
   const startedAt = Date.now();
+  
+  // 1. Determine Cycle Info BEFORE generating tasks
+  let cycleInfo;
+  try {
+    cycleInfo = await getCurrentCycle(supabase);
+  } catch (err) {
+    console.error('[cycle] Error determining cycle:', err);
+    // Fallback safe mode
+    cycleInfo = { cycle_number: 1, cycle_start_at: new Date().toISOString() };
+  }
 
   const tasks = [];
-  for (const feed of FEEDS) {
+
+  if (USE_MEIO_NEWS_ONLY) {
     try {
-      const xml = await fetchFeedXml(feed.url);
-      const feedData = await parser.parseString(xml);
-      const items = (feedData.items || []).slice(0, perFeedLimit);
-      for (const item of items) {
-        const link = item?.link;
-        if (!link) continue; // link is our dedupe key
-        tasks.push(normalizeItemToTask({ item, feed }));
+      const homepage = await fetchFeedXml(MEIO_NEWS_BASE);
+      const links = extractMeioNewsLinks(homepage, perFeedLimit);
+      const selected = links.slice(0, perFeedLimit);
+
+      for (const link of selected) {
+        try {
+          const html = await fetchFeedXml(link);
+          const title = extractMetaContent(html, 'og:title') || 'Notícia';
+          const description = extractMetaContent(html, 'og:description') || '';
+          const image = extractMetaContent(html, 'og:image') || null;
+          const category = categoryFromUrl(link);
+
+          const item = {
+            title,
+            description,
+            link,
+          };
+
+          const feed = { source: MEIO_NEWS_SOURCE, category };
+          const task = normalizeItemToTask({ item, feed });
+          
+          // Apply Cycle Info
+          task.cycle_number = cycleInfo.cycle_number;
+          task.cycle_start_at = cycleInfo.cycle_start_at;
+
+          if (image) task.content.image_url = image;
+          tasks.push(task);
+        } catch (err) {
+          console.error(`[news] ${MEIO_NEWS_SOURCE} fail:`, err?.message || err);
+        }
       }
-      // eslint-disable-next-line no-console
-      console.log(`[news] ${feed.source} ok (${items.length})`);
+      console.log(`[news] ${MEIO_NEWS_SOURCE} ok (${tasks.length})`);
     } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error(`[news] ${feed.source} fail:`, err?.message || err);
+      console.error(`[news] ${MEIO_NEWS_SOURCE} fail:`, err?.message || err);
     }
   }
 
@@ -194,15 +342,12 @@ async function ingestOnce({ perFeedLimit = 20 } = {}) {
         return await fn();
       } catch (err) {
         lastErr = err;
-        // small exponential-ish backoff
         await sleep(baseDelayMs * Math.pow(2, i));
       }
     }
     throw lastErr;
   }
 
-  // Dedupe against a recent window to avoid huge "in(...)" queries.
-  // This keeps the carousel effectively unlimited while staying reliable.
   const RECENT_WINDOW = 2000;
   const { data: recent, error: recentError } = await withRetry(() =>
     supabase.from('news_tasks').select('content, created_at').order('created_at', { ascending: false }).range(0, RECENT_WINDOW - 1),

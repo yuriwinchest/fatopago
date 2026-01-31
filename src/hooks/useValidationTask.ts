@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useNavigate, useParams } from 'react-router-dom';
 import { NewsTask } from '../types';
+import { consumeActivePlanValidation, getPlanAccessForCurrentUser, PlanPurchase } from '../lib/planService';
 
 export function useValidationTask() {
     const { id } = useParams();
@@ -12,11 +13,33 @@ export function useValidationTask() {
     const [showSuccess, setShowSuccess] = useState(false);
     const [showHistory, setShowHistory] = useState(false);
     const [recentValidations, setRecentValidations] = useState<any[]>([]);
+    const [planBlocked, setPlanBlocked] = useState(false);
+    const [planMessage, setPlanMessage] = useState<string | null>(null);
+    const [activePlan, setActivePlan] = useState<PlanPurchase | null>(null);
+    const [alreadyVoted, setAlreadyVoted] = useState(false);
 
     useEffect(() => {
         const fetchTask = async () => {
             if (!id) return;
             try {
+                const planAccess = await getPlanAccessForCurrentUser();
+                if (planAccess.status === 'no-session') {
+                    navigate('/login');
+                    return;
+                }
+                if (planAccess.status === 'no-plan' || planAccess.status === 'exhausted') {
+                    setPlanBlocked(true);
+                    setPlanMessage('Você não tem saldo para validar. Escolha um plano para continuar.');
+                    return;
+                }
+                if (planAccess.status !== 'ok') {
+                    setPlanBlocked(true);
+                    setPlanMessage(planAccess.status === 'error' ? planAccess.message : 'Falha ao verificar plano.');
+                    return;
+                }
+
+                setActivePlan(planAccess.plan);
+
                 const { data, error } = await supabase
                     .from('news_tasks')
                     .select('*')
@@ -25,6 +48,31 @@ export function useValidationTask() {
 
                 if (error) throw error;
                 setTask(data);
+
+                // Check if user already voted in current cycle
+                const cycleStart = new Date(data.cycle_start_at || data.created_at);
+                const cycleEnd = new Date(cycleStart.getTime() + 24 * 60 * 60 * 1000);
+                const now = new Date();
+
+                if (now >= cycleEnd) {
+                    setPlanBlocked(true);
+                    setPlanMessage('Este ciclo de votação foi encerrado. Aguarde novas notícias.');
+                    return;
+                }
+
+                const { data: existingVote } = await supabase
+                    .from('validations')
+                    .select('id')
+                    .eq('task_id', id)
+                    .eq('user_id', planAccess.plan.user_id)
+                    .gte('created_at', cycleStart.toISOString())
+                    .single();
+
+                if (existingVote) {
+                    setAlreadyVoted(true);
+                    setPlanBlocked(true);
+                    setPlanMessage('Você já votou nesta notícia neste ciclo. Aguarde o próximo ciclo.');
+                }
             } catch (err) {
                 console.error(err);
             } finally {
@@ -57,9 +105,53 @@ export function useValidationTask() {
         if (data) setRecentValidations(data);
     };
 
-    const handleVote = async (verdict: boolean | null) => {
+    const handleVote = async (verdict: boolean | null, justification?: string, proofLink?: string) => {
         if (!task) return;
+
         setVoting(true);
+
+        try {
+            // Use RPC for secure, atomic validation
+            const { data, error } = await supabase.rpc('submit_validation', {
+                p_task_id: task.id,
+                p_verdict: verdict,
+                p_justification: verdict ? null : (justification?.trim() || null),
+                p_proof_link: verdict ? null : (proofLink?.trim() || null)
+            });
+
+            if (error) {
+                if (error.message.includes("function public.submit_validation") || error.message.includes("does not exist")) {
+                    console.warn("RPC submit_validation not found, falling back to legacy insecure method.");
+                    await handleLegacyVote(verdict);
+                    return;
+                }
+                throw error;
+            }
+
+            if (data?.status === 'error') {
+                throw new Error(data.message);
+            }
+
+            setShowSuccess(true);
+            setTimeout(() => {
+                navigate('/validation');
+            }, 2000);
+
+        } catch (err: any) {
+            console.error("Error submitting vote:", err);
+            setVoting(false);
+            alert(err.message || "Erro ao enviar validação. Tente novamente.");
+        }
+    };
+
+    const handleLegacyVote = async (verdict: boolean | null) => {
+        if (!task) return;
+
+        if (!activePlan) {
+            alert("Você não tem saldo para validar. Escolha um plano para continuar.");
+            navigate('/plans?reason=no-balance&returnTo=/validation');
+            return;
+        }
 
         try {
             const { data: { session } } = await supabase.auth.getSession();
@@ -69,17 +161,17 @@ export function useValidationTask() {
                 return;
             }
 
-            // Transaction-like logic
             const { error: insertError } = await supabase.from('validations').insert({
                 task_id: task.id,
                 user_id: user.id,
+                plan_purchase_id: activePlan.id,
                 verdict: verdict
             });
 
             if (insertError) throw insertError;
 
-            // Optimistic update of profile (or Trigger based)
-            // Here we assume a trigger or we update manually:
+            await consumeActivePlanValidation(activePlan);
+
             const { data: profile } = await supabase
                 .from('profiles')
                 .select('current_balance, reputation_score')
@@ -88,7 +180,7 @@ export function useValidationTask() {
 
             if (profile) {
                 await supabase.from('profiles').update({
-                    current_balance: (profile.current_balance || 0) + task.content.reward,
+                    current_balance: (profile.current_balance || 0) + Number(task.content.reward),
                     reputation_score: (profile.reputation_score || 0) + 10
                 }).eq('id', user.id);
             }
@@ -99,9 +191,10 @@ export function useValidationTask() {
             }, 2000);
 
         } catch (err) {
-            console.error("Error submitting vote:", err);
+            console.error("Legacy vote error:", err);
+            alert("Erro na validação legada. Tente novamente.");
+        } finally {
             setVoting(false);
-            alert("Erro ao enviar validação. Tente novamente.");
         }
     };
 
@@ -114,6 +207,9 @@ export function useValidationTask() {
         setShowHistory,
         recentValidations,
         handleVote,
-        navigate
+        navigate,
+        planBlocked,
+        planMessage,
+        alreadyVoted
     };
 }

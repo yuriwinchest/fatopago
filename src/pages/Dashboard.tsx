@@ -6,17 +6,47 @@ import ValidationModal from '../components/ValidationModal';
 import { NewsCarousel } from '../components/NewsCarousel';
 import { AppLayout } from '../layouts/AppLayout';
 import { useDashboard } from '../hooks/useDashboard';
+import { VALIDATION_UNIT_VALUE } from '../lib/planRules';
+import { getPlanAccessForCurrentUser } from '../lib/planService';
 
 const Dashboard = () => {
     const navigate = useNavigate();
-    const { profile, tasks, setTasks, loading } = useDashboard();
+    const { profile, tasks, setTasks, loading, activePlan } = useDashboard();
 
     const [selectedTask, setSelectedTask] = useState<NewsTask | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [planNotice, setPlanNotice] = useState<string | null>(null);
+    const [checkingPlan, setCheckingPlan] = useState(false);
 
-    const handleOpenValidation = (task: NewsTask) => {
-        setSelectedTask(task);
-        setIsModalOpen(true);
+    const handleOpenValidation = async (task: NewsTask) => {
+        if (checkingPlan) return;
+        setCheckingPlan(true);
+        setPlanNotice(null);
+
+        const access = await getPlanAccessForCurrentUser();
+        if (access.status === 'ok') {
+            setSelectedTask(task);
+            setIsModalOpen(true);
+            setCheckingPlan(false);
+            return;
+        }
+
+        if (access.status === 'no-session') {
+            navigate('/login');
+            setCheckingPlan(false);
+            return;
+        }
+
+        if (access.status === 'no-plan' || access.status === 'exhausted') {
+            setPlanNotice('Você não tem saldo para validar. Escolha um plano para continuar.');
+            navigate('/plans?reason=no-balance&returnTo=/dashboard');
+            setCheckingPlan(false);
+            return;
+        }
+
+        setPlanNotice(access.status === 'error' ? access.message : 'Não foi possível verificar seu plano.');
+        setCheckingPlan(false);
+        return;
     };
 
     const handleValidationComplete = () => {
@@ -47,6 +77,11 @@ const Dashboard = () => {
     const reputationScore = profile?.reputation_score || 0;
     const reputationLevel = reputationScore > 500 ? 'Diamante' : (reputationScore > 100 ? 'Ouro' : 'Bronze');
     const reputationPercent = reputationScore % 100;
+    const remainingValidations = activePlan ? Math.max(activePlan.max_validations - activePlan.used_validations, 0) : 0;
+    const cycleBalance = remainingValidations * VALIDATION_UNIT_VALUE;
+    const cycleTotal = activePlan ? activePlan.max_validations * VALIDATION_UNIT_VALUE : 0;
+    const cycleUsed = Math.max(cycleTotal - cycleBalance, 0);
+    const cyclePercent = cycleTotal > 0 ? Math.min((cycleBalance / cycleTotal) * 100, 100) : 0;
 
     return (
         <AppLayout
@@ -55,6 +90,11 @@ const Dashboard = () => {
             showLogout={true}
         >
             <div className="space-y-8">
+                {planNotice && (
+                    <div className="bg-red-500/10 border border-red-500/20 text-red-300 text-xs rounded-2xl px-4 py-3">
+                        {planNotice}
+                    </div>
+                )}
                 {/* Balance Card */}
                 <div
                     className="group bg-gradient-to-br from-[#6D28D9] to-[#4C1D95] rounded-[32px] p-8 relative overflow-hidden shadow-2xl border border-white/10 cursor-pointer hover:scale-[1.02] transition-all"
@@ -70,7 +110,22 @@ const Dashboard = () => {
                                 Sacar <Wallet className="w-3 h-3 ml-2 inline" />
                             </button>
                         </div>
-                        <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10">
+                        <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10 space-y-3">
+                            <div className="flex items-center justify-between text-[10px] font-bold text-white uppercase">
+                                <span>Saldo do Ciclo</span>
+                                <span className="text-green-200">{formatCurrency(cycleBalance)}</span>
+                            </div>
+                            <div className="flex items-center justify-between text-[10px] font-bold text-purple-100 uppercase">
+                                <span>Validações Restantes</span>
+                                <span>{remainingValidations}</span>
+                            </div>
+                            <div className="flex items-center justify-between text-[10px] font-bold text-slate-200 uppercase">
+                                <span>Consumo do Ciclo</span>
+                                <span>{formatCurrency(cycleUsed)} / {formatCurrency(cycleTotal)}</span>
+                            </div>
+                            <div className="h-1.5 w-full bg-black/20 rounded-full overflow-hidden">
+                                <div className="h-full bg-green-300 rounded-full transition-all" style={{ width: `${cyclePercent}%` }} />
+                            </div>
                             <div className="flex justify-between items-center mb-2 text-[10px] font-bold text-white uppercase">
                                 <span>🏆 Nível: {reputationLevel}</span>
                                 <span>{reputationPercent}%</span>

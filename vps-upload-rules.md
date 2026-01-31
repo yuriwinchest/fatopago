@@ -14,7 +14,7 @@ O deploy é realizado através de um script Node.js (`scripts/deploy_quick.cjs`)
 2.  **Execução do Deploy**: Rode o script de deploy passando as credenciais necessárias via variáveis de ambiente ou garantindo que estejam no seu arquivo `.env`.
     ```powershell
     # Exemplo em PowerShell (Windows)
-    $env:VPS_HOST='72.60.53.191'; $env:VPS_USER='root'; $env:VPS_PASSWORD='Horapiaui@2026'; node scripts/deploy_quick.cjs
+    $env:VPS_HOST='SEU_IP'; $env:VPS_USER='SEU_USER'; $env:VPS_PASSWORD='SUA_SENHA'; node scripts/deploy_quick.cjs
     ```
     *O script irá:*
     - Conectar à VPS via SSH.
@@ -23,10 +23,10 @@ O deploy é realizado através de um script Node.js (`scripts/deploy_quick.cjs`)
     - Reiniciar o processo via PM2 (`pm2 restart fatopago`).
 
 ### Dados da VPS:
-- **Domínio (Principal)**: `https://fatopago.com`
-- **Host (IP)**: `72.60.53.191`
-- **Usuário**: `root`
-- **Senha**: `Horapiaui@2026`
+- **Domínio (Principal)**: `https://SEU_DOMINIO`
+- **Host (IP)**: `SEU_IP`
+- **Usuário**: `SEU_USER`
+- **Senha**: `SUA_SENHA`
 - **Diretório da Aplicação**: `/var/www/fatopago`
 
 ---
@@ -36,20 +36,20 @@ O deploy é realizado através de um script Node.js (`scripts/deploy_quick.cjs`)
 Para acessar o banco de dados e APIs do Supabase de forma programática ou via CLI sem digitar senhas, utilizamos o **Access Token** ou as **API Keys** configuradas.
 
 ### Credenciais Supabase:
-- **URL do Projeto**: `https://raxjzfvunjxqbxswuipp.supabase.co`
-- **Project Ref (ID)**: `raxjzfvunjxqbxswuipp`
-- **Anon Key**: `sb_publishable_V9cclrMml7jD7GF_8q_r2w_477uS_76`
-- **Access Token (CLI)**: `sbp_aecdc8b279a2adb5732e9b3c127a042b3c130db1`
+- **URL do Projeto**: `https://SEU-PROJETO.supabase.co`
+- **Project Ref (ID)**: `SEU_PROJECT_REF`
+- **Anon Key**: `SUA_ANON_KEY`
+- **Access Token (CLI)**: `SEU_ACCESS_TOKEN`
 
 ### Como Acessar via CLI:
 Se precisar usar a ferramenta de linha de comando do Supabase:
 1.  Configure o token de acesso no ambiente:
     ```bash
-    export SUPABASE_ACCESS_TOKEN=sbp_aecdc8b279a2adb5732e9b3c127a042b3c130db1
+    export SUPABASE_ACCESS_TOKEN=SEU_ACCESS_TOKEN
     ```
 2.  Ligue o projeto localmente ao remoto (se necessário):
     ```bash
-    supabase link --project-ref raxjzfvunjxqbxswuipp
+    supabase link --project-ref SEU_PROJECT_REF
     ```
 
 ### Como Testar Conexão (Script):

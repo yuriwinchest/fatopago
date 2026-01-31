@@ -138,7 +138,6 @@ export function useValidationHub() {
 
     useEffect(() => {
         loadFirstPage(selectedCategory);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []); // first mount only (selectedCategory already restored from persisted state)
 
     // Restore carousel position once after mount/data load (mobile "voltar" keeps same card)

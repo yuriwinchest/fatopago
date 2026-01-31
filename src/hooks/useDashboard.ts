@@ -3,12 +3,14 @@ import { supabase } from '../lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import { UserProfile, NewsTask } from '../types';
 import { MOCK_NEWS } from '../data/mockNews';
+import { fetchActivePlan, PlanPurchase } from '../lib/planService';
 
 export function useDashboard() {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
     const [profile, setProfile] = useState<UserProfile | null>(null);
     const [tasks, setTasks] = useState<NewsTask[]>([]);
+    const [activePlan, setActivePlan] = useState<PlanPurchase | null>(null);
 
     // We can expose modal state here or keep in component if it's purely UI
     // For cleanliness, we keep modal UI state in the component, but data here usually
@@ -26,13 +28,15 @@ export function useDashboard() {
             const user = session.user;
 
             // Parallel fetching for performance
-            const [profileResult, validationsResult, tasksResult] = await Promise.all([
+            const [profileResult, validationsResult, tasksResult, activePlanResult] = await Promise.all([
                 supabase.from('profiles').select('*').eq('id', user.id).single(),
                 supabase.from('validations').select('task_id').eq('user_id', user.id),
-                supabase.from('news_tasks').select('*').order('created_at', { ascending: false }).limit(50)
+                supabase.from('news_tasks').select('*').order('created_at', { ascending: false }).limit(50),
+                fetchActivePlan(user.id)
             ]);
 
             setProfile(profileResult.data);
+            setActivePlan(activePlanResult);
 
             const validatedTaskIds = validationsResult.data?.map((v: any) => v.task_id) || [];
             const baseTasks = (tasksResult.data || []) as NewsTask[];
@@ -58,6 +62,7 @@ export function useDashboard() {
         profile,
         tasks,
         setTasks,
-        loading
+        loading,
+        activePlan
     };
 }

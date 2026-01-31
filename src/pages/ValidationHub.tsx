@@ -1,9 +1,13 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Loader2, Filter, CheckCircle } from 'lucide-react';
 import { AppLayout } from '../layouts/AppLayout';
 import { useValidationHub } from '../hooks/useValidationHub';
+import { getPlanAccessForCurrentUser } from '../lib/planService';
 const ValidationHub = () => {
     const navigate = useNavigate();
+    const [planNotice, setPlanNotice] = useState<string | null>(null);
+    const [checkingPlan, setCheckingPlan] = useState(false);
     const {
         filteredTasks,
         loading,
@@ -30,6 +34,35 @@ const ValidationHub = () => {
         }
     };
 
+    const handleValidateClick = async (taskId: string) => {
+        if (checkingPlan) return;
+        setCheckingPlan(true);
+        setPlanNotice(null);
+
+        const access = await getPlanAccessForCurrentUser();
+        if (access.status === 'ok') {
+            navigate(`/validation/task/${taskId}`);
+            setCheckingPlan(false);
+            return;
+        }
+
+        if (access.status === 'no-session') {
+            navigate('/login');
+            setCheckingPlan(false);
+            return;
+        }
+
+        if (access.status === 'no-plan' || access.status === 'exhausted') {
+            setPlanNotice('Você não tem saldo para validar. Escolha um plano para continuar.');
+            navigate(`/plans?reason=no-balance&returnTo=/validation/task/${taskId}`);
+            setCheckingPlan(false);
+            return;
+        }
+
+        setPlanNotice(access.status === 'error' ? access.message : 'Não foi possível verificar seu plano.');
+        setCheckingPlan(false);
+    };
+
     if (loading) {
         return (
             <div className="min-h-screen bg-[#0F0529] flex items-center justify-center text-white">
@@ -44,15 +77,17 @@ const ValidationHub = () => {
             subtitle="Escolha uma notícia para verificar"
             headerClassName="pb-4"
         >
-            {error && (
+            {(error || planNotice) && (
                 <div className="mb-6 bg-white/5 border border-white/10 rounded-2xl p-4 flex items-center justify-between gap-4">
-                    <p className="text-xs text-slate-300">{error}</p>
-                    <button
-                        onClick={retry}
-                        className="shrink-0 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold px-4 py-2 rounded-xl transition-colors"
-                    >
-                        Recarregar
-                    </button>
+                    <p className="text-xs text-slate-300">{planNotice || error}</p>
+                    {error && (
+                        <button
+                            onClick={retry}
+                            className="shrink-0 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold px-4 py-2 rounded-xl transition-colors"
+                        >
+                            Recarregar
+                        </button>
+                    )}
                 </div>
             )}
 
@@ -91,6 +126,8 @@ const ValidationHub = () => {
             {/* Carousel Container */}
             <div className="relative group/carousel">
                 <button
+                    aria-label="Scroll left"
+                    title="Scroll left"
                     onClick={() => handleScroll('left')}
                     className="absolute left-0 top-1/2 -translate-y-1/2 z-20 bg-black/50 hover:bg-black/80 text-white p-2 rounded-full backdrop-blur-sm border border-white/10 opacity-0 group-hover/carousel:opacity-100 transition-opacity hidden md:block"
                 >
@@ -98,6 +135,8 @@ const ValidationHub = () => {
                 </button>
 
                 <button
+                    aria-label="Scroll right"
+                    title="Scroll right"
                     onClick={() => handleScroll('right')}
                     className="absolute right-0 top-1/2 -translate-y-1/2 z-20 bg-black/50 hover:bg-black/80 text-white p-2 rounded-full backdrop-blur-sm border border-white/10 opacity-0 group-hover/carousel:opacity-100 transition-opacity hidden md:block"
                 >
@@ -161,7 +200,7 @@ const ValidationHub = () => {
                                         <span className="text-lg font-bold text-[#00E676]">{formatCurrency(task.content.reward)}</span>
                                     </div>
                                     <button
-                                        onClick={() => navigate(`/validation/task/${task.id}`)}
+                                        onClick={() => handleValidateClick(task.id)}
                                         className="bg-[#6D28D9] hover:bg-[#7C3AED] text-white text-xs font-bold px-5 py-3 rounded-xl transition-all shadow-lg hover:scale-105 active:scale-95"
                                         aria-label={`Avaliar notícia: ${task.content.title}`}
                                     >

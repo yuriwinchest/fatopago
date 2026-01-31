@@ -27,6 +27,17 @@ class ErrorBoundary extends Component<Props, State> {
 
     public render() {
         if (this.state.hasError) {
+            const errorMessage = (() => {
+                const err = this.state.error;
+                if (!err) return 'Erro desconhecido.';
+                if (err instanceof Error) return err.message || 'Erro desconhecido.';
+                try {
+                    return JSON.stringify(err);
+                } catch {
+                    return String(err);
+                }
+            })();
+
             return (
                 <div className="min-h-screen bg-[#0F0529] flex items-center justify-center p-6 text-center text-white">
                     <div className="max-w-md w-full bg-[#1A1040] border border-white/10 p-8 rounded-3xl shadow-2xl">
@@ -39,11 +50,14 @@ class ErrorBoundary extends Component<Props, State> {
                         </p>
 
                         {/* Technical Error Details (Optional, collapsed mostly) */}
-                        {this.state.error?.message.includes('removeChild') && (
+                        {String(errorMessage).includes('removeChild') && (
                             <div className="bg-black/30 p-3 rounded-lg text-xs text-left mb-6 text-amber-300 font-mono">
                                 Dica: Desative o Google Tradutor para este site.
                             </div>
                         )}
+                        <div className="bg-black/30 p-3 rounded-lg text-[11px] text-left mb-6 text-slate-300 font-mono break-all">
+                            {errorMessage}
+                        </div>
 
                         <button
                             onClick={() => window.location.reload()}
