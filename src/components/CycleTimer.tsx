@@ -40,9 +40,8 @@ export const CycleTimer = ({ compact = false }: CycleTimerProps) => {
             : 'bg-purple-950/40 border-purple-500/20'
             }`}>
 
-            {/* Background Progress Fill */}
             <div
-                className="absolute top-0 left-0 h-full bg-orange-500/20 transition-all duration-1000 ease-linear"
+                className="absolute top-0 left-0 h-full bg-gradient-to-r from-yellow-700/30 via-amber-500/30 to-yellow-400/40 shadow-[0_0_20px_rgba(251,191,36,0.3)] border-r border-yellow-400/30 transition-all duration-1000 ease-linear backdrop-brightness-125"
                 style={{ width: `${progressPercentage}%` }}
             />
 
