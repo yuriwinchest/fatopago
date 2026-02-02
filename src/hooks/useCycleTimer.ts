@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 interface CycleInfo {
     cycleStartAt: string;
     cycleEndAt: string;
+    nextCycleStartAt: string;
     timeRemaining: number;
     currentCycleNumber: number;
 }
@@ -65,6 +66,7 @@ export function useCycleTimer() {
                 setCycleInfo({
                     cycleStartAt: startAt.toISOString(),
                     cycleEndAt: endAt.toISOString(),
+                    nextCycleStartAt: new Date(endAt.getTime() + 30 * 60 * 1000).toISOString(),
                     timeRemaining: remaining,
                     currentCycleNumber: data.cycle_number || 1
                 });

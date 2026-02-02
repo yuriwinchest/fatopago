@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
     User,
     MapPin,
@@ -8,12 +9,16 @@ import {
     Camera,
     CheckCircle,
     XCircle,
-    Loader2
+    Loader2,
+    Copy,
+    Eye,
+    EyeOff
 } from 'lucide-react';
 import { AppLayout } from '../layouts/AppLayout';
 import { useProfile } from '../hooks/useProfile';
 
 const Profile = () => {
+    const [showCode, setShowCode] = useState(false);
     const {
         profile,
         stats,
@@ -178,20 +183,33 @@ const Profile = () => {
                             {profile?.referral_active ? (
                                 <div className="space-y-4">
                                     <div className="bg-[#0F0529] rounded-xl p-3 border border-purple-500/20">
-                                        <p className="text-xs text-slate-400 mb-1 font-bold">Seu Código de Indicação</p>
-                                        <div className="flex items-center justify-between gap-2">
-                                            <code className="text-xl font-mono font-bold text-white tracking-widest">
-                                                {profile?.referral_code || '---'}
-                                            </code>
+                                        <p className="text-[10px] text-slate-400 mb-2 font-bold uppercase tracking-widest">Seu Código de Indicação</p>
+                                        <div className="flex items-center justify-between gap-3 bg-black/40 p-3 rounded-lg border border-white/5 backdrop-blur-sm">
+                                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                                                <code className="text-xl font-mono font-bold text-white tracking-[0.2em] truncate">
+                                                    {showCode ? (profile?.referral_code || '---') : '••••••••'}
+                                                </code>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowCode(!showCode)}
+                                                    className="p-1.5 hover:bg-white/10 rounded-md transition-colors text-slate-400"
+                                                    title={showCode ? "Ocultar" : "Mostrar"}
+                                                >
+                                                    {showCode ? <EyeOff size={16} /> : <Eye size={16} />}
+                                                </button>
+                                            </div>
                                             <button
+                                                type="button"
                                                 onClick={() => {
-                                                    navigator.clipboard.writeText(profile?.referral_code || '');
-                                                    // Optional: Toast notification
+                                                    if (profile?.referral_code) {
+                                                        navigator.clipboard.writeText(profile.referral_code);
+                                                    }
                                                 }}
-                                                className="p-2 hover:bg-white/10 rounded-lg transition-colors text-purple-400"
+                                                className="flex items-center gap-2 px-3 py-1.5 bg-purple-600/20 hover:bg-purple-600/40 text-purple-300 rounded-lg transition-all border border-purple-500/30 text-[10px] font-bold whitespace-nowrap active:scale-95 shadow-lg"
                                                 title="Copiar Código"
                                             >
-                                                <div className="w-4 h-4 font-bold">COPIAR</div>
+                                                <Copy className="w-3 h-3" />
+                                                COPIAR
                                             </button>
                                         </div>
                                     </div>
