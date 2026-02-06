@@ -3,10 +3,18 @@
 const { NodeSSH } = require('node-ssh');
 const ssh = new NodeSSH();
 
-// VPS Credentials
-const host = '72.60.53.191';
-const username = 'root';
-const password = 'Horapiaui@2026';
+const host = process.env.VPS_HOST;
+const username = process.env.VPS_USER;
+const password = process.env.VPS_PASSWORD;
+const privateKey = process.env.VPS_KEY_PATH;
+const port = process.env.VPS_PORT ? Number(process.env.VPS_PORT) : undefined;
+
+if (!host || !username) {
+    throw new Error('Defina VPS_HOST e VPS_USER no ambiente.');
+}
+if (!privateKey && !password) {
+    throw new Error('Defina VPS_KEY_PATH (recomendado) ou VPS_PASSWORD no ambiente.');
+}
 
 async function _checkVpsNetwork() {
     console.log(`Connecting to ${host}...`);
@@ -14,7 +22,8 @@ async function _checkVpsNetwork() {
         await ssh.connect({
             host,
             username,
-            password,
+            port,
+            ...(privateKey ? { privateKey } : { password }),
             tryKeyboard: true,
         });
         console.log('Connected! Checking Exposed Ports and APIs...\n');
@@ -68,7 +77,13 @@ async function _checkVpsNetwork() {
 async function deepCheck() {
     console.log(`Connecting to ${host} for FINAL SECURITY LOCKDOWN...`);
     try {
-        await ssh.connect({ host, username, password, tryKeyboard: true });
+        await ssh.connect({
+            host,
+            username,
+            port,
+            ...(privateKey ? { privateKey } : { password }),
+            tryKeyboard: true
+        });
 
         // 1. VERIFY NGINX CONFIG
         console.log('\n--- 1. VERIFYING NGINX PROXY ---');
@@ -76,21 +91,21 @@ async function deepCheck() {
         console.log(nginxConf.stdout);
 
         if (nginxConf.stdout.includes('proxy_pass')) {
-             console.log('✅ Proxy pass detected. Nginx is likely handling traffic correctly.');
+            console.log('✅ Proxy pass detected. Nginx is likely handling traffic correctly.');
         } else {
-             console.log('⚠️  WARNING: No proxy_pass found! Site might be serving static files or misconfigured.');
+            console.log('⚠️  WARNING: No proxy_pass found! Site might be serving static files or misconfigured.');
         }
 
         // 2. ENABLE FIREWALL (UFW)
         console.log('\n--- 2. ACTIVATING FIREWALL (UFW) ---');
-        
+
         // Allow critical ports FIRST
         console.log('Allowing SSH (22)...');
         await ssh.execCommand('ufw allow 22/tcp');
-        
+
         console.log('Allowing HTTP (80)...');
         await ssh.execCommand('ufw allow 80/tcp');
-        
+
         console.log('Allowing HTTPS (443)...');
         await ssh.execCommand('ufw allow 443/tcp');
 
@@ -111,5 +126,4 @@ async function deepCheck() {
     }
 }
 
-// _checkVpsNetwork(); 
-deepCheck();
+_checkVpsNetwork();

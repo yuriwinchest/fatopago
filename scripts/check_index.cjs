@@ -1,4 +1,3 @@
-
 const { NodeSSH } = require('node-ssh');
 const ssh = new NodeSSH();
 
@@ -15,27 +14,26 @@ if (!privateKey && !password) {
     throw new Error('Defina VPS_KEY_PATH (recomendado) ou VPS_PASSWORD no ambiente.');
 }
 
-async function readConfig() {
-    console.log(`Connecting to ${host}...`);
+async function checkIndex() {
     try {
         await ssh.connect({
             host,
             username,
             port,
-            ...(privateKey ? { privateKey } : { password })
+            ...(privateKey ? { privateKey } : { password }),
+            tryKeyboard: true,
+            readyTimeout: 30000
         });
-        console.log('Connected!');
 
-        console.log('\n--- Reading fatopago.com.conf ---');
-        const config = await ssh.execCommand('cat /etc/nginx/conf.d/fatopago.com.conf');
-        console.log(config.stdout);
+        console.log('--- CONTEÚDO DO INDEX.HTML DISPONÍVEL NA VPS ---');
+        const catIndex = await ssh.execCommand('cat /var/www/fatopago/dist/index.html');
+        console.log(catIndex.stdout);
 
         ssh.dispose();
-
     } catch (error) {
-        console.error('Reading Config Failed:', error);
+        console.error('❌ Erro:', error);
         ssh.dispose();
     }
 }
 
-readConfig();
+checkIndex();

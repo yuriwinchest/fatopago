@@ -120,3 +120,29 @@ dist
 temp_app/
 .vercel
 .env*.local
+
+# SSH Keys and Certificates (SECURITY)
+*.key
+*.pem
+*.p12
+*.pfx
+*.crt
+*.cer
+.ssh/
+certs/
+
+# Deploy artifacts
+app.tar
+*.tar
+*.tar.gz
+
+# VPS and deployment configs with credentials
+deploy_vps.sh
+.env.production
+.env.local
+.env.*.local
+
+# Backup files that may contain sensitive data
+backup_legacy/
+*.bak
+*.backup

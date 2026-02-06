@@ -42,6 +42,19 @@ async function deploy() {
         await ssh.putFile(localScriptPath, remoteScriptPath);
         console.log('deploy_vps.sh uploaded.');
 
+        const localEnvPath = path.join(__dirname, '../.env');
+        const remoteEnvPath = '/var/www/fatopago/.env';
+        try {
+            console.log('Uploading .env...');
+            // Target dir might not exist yet if first run, but script creates it. 
+            // Better to upload to /root first then move in script or just create dir first.
+            // Let's upload to /root/.env_temp and let script move it.
+            await ssh.putFile(localEnvPath, '/root/.env_temp');
+            console.log('.env uploaded to temp.');
+        } catch (e) {
+            console.warn('Could not upload .env (maybe it does not exist locally?), skipping.', e.message);
+        }
+
         console.log('Making script executable...');
         await ssh.execCommand(`chmod +x ${remoteScriptPath}`);
 

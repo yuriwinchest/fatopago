@@ -4,10 +4,18 @@ const { NodeSSH } = require('node-ssh');
 const ssh = new NodeSSH();
 const path = require('path');
 
-// VPS Credentials
-const host = '72.60.53.191';
-const username = 'root';
-const password = 'Horapiaui@2026';
+const host = process.env.VPS_HOST;
+const username = process.env.VPS_USER;
+const password = process.env.VPS_PASSWORD;
+const privateKey = process.env.VPS_KEY_PATH;
+const port = process.env.VPS_PORT ? Number(process.env.VPS_PORT) : undefined;
+
+if (!host || !username) {
+    throw new Error('Defina VPS_HOST e VPS_USER no ambiente.');
+}
+if (!privateKey && !password) {
+    throw new Error('Defina VPS_KEY_PATH (recomendado) ou VPS_PASSWORD no ambiente.');
+}
 
 const localScriptPath = path.join(__dirname, 'check_supabase_connection.cjs');
 const remoteScriptPath = '/var/www/fatopago/scripts/check_supabase_connection.cjs';
@@ -19,7 +27,8 @@ async function verifyRemoteConnection() {
         await ssh.connect({
             host,
             username,
-            password,
+            port,
+            ...(privateKey ? { privateKey } : { password }),
             tryKeyboard: true,
         });
         console.log('Connected!');

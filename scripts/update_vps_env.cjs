@@ -1,8 +1,13 @@
 const { NodeSSH } = require('node-ssh');
 const ssh = new NodeSSH();
+const path = require('path');
+
+require('dotenv').config({ path: path.join(__dirname, '../.env.local') });
+require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
 const host = process.env.VPS_HOST;
-const username = process.env.VPS_USER;
+if (!host) throw new Error('VPS_HOST environment variable is required');
+const username = process.env.VPS_USER || 'root';
 const password = process.env.VPS_PASSWORD;
 const privateKey = process.env.VPS_KEY_PATH;
 const port = process.env.VPS_PORT ? Number(process.env.VPS_PORT) : undefined;
@@ -10,10 +15,25 @@ const port = process.env.VPS_PORT ? Number(process.env.VPS_PORT) : undefined;
 if (!host || !username) throw new Error('Defina VPS_HOST e VPS_USER no ambiente.');
 if (!privateKey && !password) throw new Error('Defina VPS_KEY_PATH (recomendado) ou VPS_PASSWORD no ambiente.');
 
-const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-if (!supabaseUrl) throw new Error('Defina SUPABASE_URL (ou VITE_SUPABASE_URL) no ambiente.');
-if (!serviceKey) throw new Error('Defina SUPABASE_SERVICE_ROLE_KEY no ambiente.');
+const updates = {
+  SUPABASE_URL: process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL,
+  SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+  VITE_STRIPE_PUBLIC_KEY: process.env.VITE_STRIPE_PUBLIC_KEY,
+  STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
+  VITE_API_URL: process.env.VITE_API_URL,
+  PORT: process.env.PORT || '3000',
+};
+
+const entriesToUpdate = Object.entries(updates).filter(([, value]) => {
+  if (typeof value !== 'string') return false;
+  return value.trim().length > 0;
+});
+
+if (entriesToUpdate.length === 0) {
+  throw new Error(
+    'Defina pelo menos uma variável para atualizar: VITE_STRIPE_PUBLIC_KEY, STRIPE_SECRET_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, VITE_API_URL, PORT.'
+  );
+}
 
 async function main() {
   await ssh.connect({
@@ -24,13 +44,58 @@ async function main() {
     tryKeyboard: true,
   });
 
-  const updateCmd = [
-    `grep -q '^SUPABASE_URL=' /var/www/fatopago/.env && sed -i 's|^SUPABASE_URL=.*|SUPABASE_URL=${supabaseUrl}|' /var/www/fatopago/.env || echo 'SUPABASE_URL=${supabaseUrl}' >> /var/www/fatopago/.env`,
-    `grep -q '^SUPABASE_SERVICE_ROLE_KEY=' /var/www/fatopago/.env && sed -i 's|^SUPABASE_SERVICE_ROLE_KEY=.*|SUPABASE_SERVICE_ROLE_KEY=${serviceKey}|' /var/www/fatopago/.env || echo 'SUPABASE_SERVICE_ROLE_KEY=${serviceKey}' >> /var/www/fatopago/.env`,
-  ].join(' && ');
+  const exportPairs = entriesToUpdate
+    .map(([key, value]) => {
+      const b64 = Buffer.from(String(value), 'utf8').toString('base64');
+      return `${key}_B64='${b64}'`;
+    })
+    .join(' ');
 
-  const res = await ssh.execCommand(updateCmd);
-  if (res.stderr) console.error(res.stderr);
+  const pyTemplate = (remoteEnvFile) => String.raw`import os
+import base64
+from pathlib import Path
+
+env_path = Path(r"${remoteEnvFile}")
+env_path.parent.mkdir(parents=True, exist_ok=True)
+
+raw_lines = []
+if env_path.exists():
+    raw_lines = env_path.read_text(encoding="utf-8").splitlines()
+
+updates = {}
+for key in ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "VITE_STRIPE_PUBLIC_KEY", "STRIPE_SECRET_KEY", "VITE_API_URL", "PORT"]:
+    b64 = os.environ.get(f"{key}_B64")
+    if b64:
+        updates[key] = base64.b64decode(b64.encode("utf-8")).decode("utf-8")
+
+seen = set()
+out = []
+for line in raw_lines:
+    if not line or line.lstrip().startswith("#") or "=" not in line:
+        out.append(line)
+        continue
+    k, _v = line.split("=", 1)
+    if k in updates:
+        out.append(f"{k}={updates[k]}")
+        seen.add(k)
+    else:
+        out.append(line)
+
+for k, v in updates.items():
+    if k not in seen:
+        out.append(f"{k}={v}")
+
+env_path.write_text("\n".join(out) + "\n", encoding="utf-8")
+env_path.chmod(0o600)`;
+
+  const remoteEnvFiles = ['/var/www/fatopago/.env', '/var/www/fatopago/.env.production'];
+
+  for (const remoteEnvFile of remoteEnvFiles) {
+    const py = pyTemplate(remoteEnvFile);
+    const updateCmd = `${exportPairs} python3 - <<'PY'\n${py}\nPY`;
+    const res = await ssh.execCommand(updateCmd);
+    if (res.stderr) console.error(res.stderr);
+  }
 
   ssh.dispose();
 }
@@ -39,6 +104,6 @@ main().catch((err) => {
   console.error('Falha ao atualizar .env da VPS:', err);
   try {
     ssh.dispose();
-  } catch {}
+  } catch { }
   process.exit(1);
 });

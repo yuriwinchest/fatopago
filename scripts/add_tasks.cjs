@@ -1,7 +1,8 @@
 
 const https = require('https');
 
-const projectRef = process.env.SUPABASE_PROJECT_REF || 'raxjzfvunjxqbxswuipp';
+const projectRef = process.env.SUPABASE_PROJECT_REF;
+if (!projectRef) throw new Error('SUPABASE_PROJECT_REF environment variable is required');
 const pat = process.env.SUPABASE_ACCESS_TOKEN;
 
 if (!pat) {
