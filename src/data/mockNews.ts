@@ -5,7 +5,7 @@ export const MOCK_NEWS = [
         content: {
             title: "Bitcoin atinge nova máxima histórica de US$ 75.000",
             description: "A criptomoeda impulsionada pela aprovação de ETFs nos EUA supera recordes anteriores e atrai novos investidores institucionais.",
-            reward: 5.00,
+            reward: 0.25,
             category: "Economia",
             source: "CoinDesk",
             difficulty: "Média",
@@ -18,7 +18,7 @@ export const MOCK_NEWS = [
         content: {
             title: "Descoberta nova espécie de dinossauro no interior de SP",
             description: "Paleontólogos encontraram fósseis preservados de um pequeno predador que viveu há 80 milhões de anos na região de Marília.",
-            reward: 6.00,
+            reward: 0.25,
             category: "Ciência",
             source: "G1 Ciência",
             difficulty: "Difícil",
@@ -122,7 +122,7 @@ export const MOCK_NEWS = [
         content: {
             title: "PIX bate recorde de transações diárias: 150 milhões",
             description: "Sistema de pagamentos instantâneos do Banco Central se consolida como o meio preferido dos brasileiros.",
-            reward: 5.00,
+            reward: 0.25,
             category: "Economia",
             source: "Valor Investe",
             difficulty: "Média",
@@ -200,7 +200,7 @@ export const MOCK_NEWS = [
         content: {
             title: "Banco Central reduz taxa Selic para 10,75%",
             description: "Sexto corte consecutivo na taxa básica de juros confirma tendência de afrouxamento monetário.",
-            reward: 5.00,
+            reward: 0.25,
             category: "Economia",
             source: "Valor",
             difficulty: "Média",

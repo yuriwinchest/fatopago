@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Loader2, Filter, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Loader2, Filter, CheckCircle, Clock, X } from 'lucide-react';
 import { AppLayout } from '../layouts/AppLayout';
 import { useValidationHub } from '../hooks/useValidationHub';
 import { getPlanAccessForCurrentUser } from '../lib/planService';
@@ -8,6 +8,8 @@ const ValidationHub = () => {
     const navigate = useNavigate();
     const [planNotice, setPlanNotice] = useState<string | null>(null);
     const [checkingPlan, setCheckingPlan] = useState(false);
+    const [showCycleModal, setShowCycleModal] = useState(false);
+    const [cycleModalMessage, setCycleModalMessage] = useState('');
     const {
         filteredTasks,
         loading,
@@ -52,14 +54,22 @@ const ValidationHub = () => {
             return;
         }
 
+        if (access.status === 'cycle-break' || access.status === 'no-cycle') {
+            setCycleModalMessage(access.message || 'Aguarde o próximo ciclo para validar.');
+            setShowCycleModal(true);
+            setCheckingPlan(false);
+            return;
+        }
+
         if (access.status === 'no-plan' || access.status === 'exhausted') {
-            setPlanNotice('Você não tem saldo para validar. Escolha um plano para continuar.');
             navigate(`/plans?reason=no-balance&returnTo=/validation/task/${taskId}`);
             setCheckingPlan(false);
             return;
         }
 
+        // Se chegou aqui, é erro ou status desconhecido - redireciona para planos
         setPlanNotice(access.status === 'error' ? access.message : 'Não foi possível verificar seu plano.');
+        navigate(`/plans?reason=error&returnTo=/validation/task/${taskId}`);
         setCheckingPlan(false);
     };
 
@@ -78,15 +88,65 @@ const ValidationHub = () => {
             headerClassName="pb-4"
         >
             {(error || planNotice) && (
-                <div className="mb-6 bg-white/5 border border-white/10 rounded-2xl p-4 flex items-center justify-between gap-4">
-                    <p className="text-xs text-slate-300">{planNotice || error}</p>
+                <div className="mb-6 bg-yellow-500/10 border-2 border-yellow-500/50 rounded-2xl p-5 flex items-start gap-4 animate-pulse">
+                    <div className="w-10 h-10 rounded-full bg-yellow-500/20 flex items-center justify-center shrink-0">
+                        <svg className="w-6 h-6 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                    </div>
+                    <div className="flex-1">
+                        <p className="text-sm font-bold text-yellow-200 mb-1">Atenção</p>
+                        <p className="text-sm text-yellow-100">{planNotice || error}</p>
+                    </div>
                     {error && (
                         <button
                             onClick={retry}
-                            className="shrink-0 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold px-4 py-2 rounded-xl transition-colors"
+                            className="shrink-0 bg-yellow-600 hover:bg-yellow-500 text-white text-xs font-bold px-4 py-2 rounded-xl transition-colors"
                         >
                             Recarregar
                         </button>
+                    )}
+
+                    {/* Cycle Info Modal */}
+                    {showCycleModal && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm animate-in fade-in duration-300">
+                            <div className="bg-[#1A1040] border border-purple-500/30 rounded-3xl p-8 max-w-md mx-4 shadow-2xl animate-in zoom-in-95 duration-300">
+                                <div className="flex justify-between items-start mb-6">
+                                    <div className="w-14 h-14 rounded-full bg-purple-500/20 flex items-center justify-center border-2 border-purple-500/40">
+                                        <Clock className="w-7 h-7 text-purple-400" />
+                                    </div>
+                                    <button
+                                        onClick={() => setShowCycleModal(false)}
+                                        className="p-2 rounded-full hover:bg-white/10 transition-colors"
+                                        aria-label="Fechar"
+                                    >
+                                        <X className="w-5 h-5 text-slate-400" />
+                                    </button>
+                                </div>
+
+                                <h2 className="text-2xl font-bold text-white mb-3">
+                                    Ciclo Não Disponível
+                                </h2>
+
+                                <p className="text-slate-300 text-sm leading-relaxed mb-6">
+                                    {cycleModalMessage}
+                                </p>
+
+                                <div className="bg-purple-500/10 border border-purple-500/20 rounded-xl p-4 mb-6">
+                                    <p className="text-xs text-purple-200 leading-relaxed">
+                                        <strong className="text-purple-300">ℹ️ Como funciona:</strong><br />
+                                        Os ciclos de validação duram 24 horas. Após cada ciclo, há um intervalo de 30 minutos antes do próximo começar.
+                                    </p>
+                                </div>
+
+                                <button
+                                    onClick={() => setShowCycleModal(false)}
+                                    className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-500 hover:to-purple-600 text-white font-bold py-3 rounded-xl transition-all shadow-lg"
+                                >
+                                    Entendi
+                                </button>
+                            </div>
+                        </div>
                     )}
                 </div>
             )}
@@ -201,10 +261,21 @@ const ValidationHub = () => {
                                     </div>
                                     <button
                                         onClick={() => handleValidateClick(task.id)}
-                                        className="bg-[#6D28D9] hover:bg-[#7C3AED] text-white text-xs font-bold px-5 py-3 rounded-xl transition-all shadow-lg hover:scale-105 active:scale-95"
+                                        disabled={checkingPlan}
+                                        className={`text-white text-xs font-bold px-5 py-3 rounded-xl transition-all shadow-lg flex items-center gap-2 ${checkingPlan
+                                            ? 'bg-gray-600 cursor-not-allowed'
+                                            : 'bg-[#6D28D9] hover:bg-[#7C3AED] hover:scale-105 active:scale-95'
+                                            }`}
                                         aria-label={`Avaliar notícia: ${task.content.title}`}
                                     >
-                                        Avaliar
+                                        {checkingPlan ? (
+                                            <>
+                                                <Loader2 className="w-4 h-4 animate-spin" />
+                                                Verificando...
+                                            </>
+                                        ) : (
+                                            'Avaliar'
+                                        )}
                                     </button>
                                 </div>
                             </div>

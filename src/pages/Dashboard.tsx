@@ -116,7 +116,7 @@ const Dashboard = () => {
                                 <span className="text-green-200">{formatCurrency(cycleBalance)}</span>
                             </div>
                             <div className="flex items-center justify-between text-[10px] font-bold text-purple-100 uppercase">
-                                <span>Validações Restantes</span>
+                                <span>Validações Restantes <span className="text-purple-300 font-normal ml-1 lowercase">(não acumulam*)</span></span>
                                 <span>{remainingValidations}</span>
                             </div>
                             <div className="flex items-center justify-between text-[10px] font-bold text-slate-200 uppercase">

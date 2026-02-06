@@ -13,6 +13,7 @@ import Profile from './pages/Profile';
 import Plans from './pages/Plans';
 import LandingPage from './pages/LandingPage';
 import FakeNews from './pages/FakeNews';
+import EarningsPolicy from './pages/EarningsPolicy';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import './App.css';
 
@@ -28,6 +29,7 @@ function App() {
                 <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/how-it-works" element={<HowItWorks />} />
                 <Route path="/noticias-falsas" element={<FakeNews />} />
+                <Route path="/politica-ganhos" element={<EarningsPolicy />} />
 
                 {/* Rotas Protegidas - Requerem Autenticação */}
                 <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />

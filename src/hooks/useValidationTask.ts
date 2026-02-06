@@ -47,7 +47,18 @@ export function useValidationTask() {
                     .single();
 
                 if (error) throw error;
-                setTask(data);
+                
+                // Apply dynamic reward policy
+                const { getRewardByCategory } = await import('../lib/planRules');
+                const taskWithPolicy = {
+                     ...data,
+                     content: {
+                        ...data.content,
+                        reward: getRewardByCategory(data.content.category)
+                     }
+                };
+                
+                setTask(taskWithPolicy);
 
                 // Check if user already voted in current cycle
                 const cycleStart = new Date(data.cycle_start_at || data.created_at);

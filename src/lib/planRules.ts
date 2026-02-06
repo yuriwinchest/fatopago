@@ -55,7 +55,47 @@ export const PLAN_LIMITS: Record<PlanId, number> = {
     expert: PLANS_CONFIG.expert.maxValidations
 };
 
-export const VALIDATION_UNIT_VALUE = 5.0; // Valor global por notícia
+// Valor global por notícia (LEGADO - Média estimada 0.50)
+export const VALIDATION_UNIT_VALUE = 0.50; 
+
+// Valores por categoria de notícia
+export const CATEGORY_REWARDS: Record<string, number> = {
+    'Política': 0.60,
+    'Politic': 0.60, // Fallback/English
+    'Esporte': 0.40,
+    'Esportes': 0.40, // Plural variation
+    'Sports': 0.40,
+    'Entretenimento/Famosos': 0.75,
+    'Entretenimento': 0.75,
+    'Famosos': 0.75,
+    'Entertainment': 0.75,
+    'Economia': 0.25,
+    'Economy': 0.25,
+    // Default categories if missing
+    'Tecnologia': 0.25, // Fallback similar to Economia
+    'Ciência': 0.25,
+    'Saúde': 0.25,
+    'Mundo': 0.25,
+    'Internacional': 0.25,
+    'Brasil': 0.25,
+    'Outros': 0.25
+};
+
+export const getRewardByCategory = (category: string): number => {
+    // Normalizar categoria (Capitalize first letter)
+    const normalized = category.charAt(0).toUpperCase() + category.slice(1);
+    // Tenta match exato ou parcial
+    if (CATEGORY_REWARDS[normalized]) return CATEGORY_REWARDS[normalized];
+    if (CATEGORY_REWARDS[category]) return CATEGORY_REWARDS[category];
+    
+    // Mapping complexo
+    if (category.toLowerCase().includes('política') || category.toLowerCase().includes('polític')) return CATEGORY_REWARDS['Política'];
+    if (category.toLowerCase().includes('esport')) return CATEGORY_REWARDS['Esporte'];
+    if (category.toLowerCase().includes('famos') || category.toLowerCase().includes('entretenimento')) return CATEGORY_REWARDS['Entretenimento'];
+    if (category.toLowerCase().includes('econ')) return CATEGORY_REWARDS['Economia'];
+
+    return 0.25; // Valor base padrão
+};
 
 export const PLAN_LABELS: Record<PlanId, string> = {
     starter: PLANS_CONFIG.starter.name,

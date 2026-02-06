@@ -5,6 +5,7 @@ import { Check, Zap, Crown, Shield, ArrowRight, Loader2 } from 'lucide-react';
 import { AppLayout } from '../layouts/AppLayout';
 import { PlanId, PLANS_CONFIG, getPlanAvailability, PLAN_LABELS } from '../lib/planRules';
 import { createPlanPurchase, fetchActivePlan, fetchPlanHistory, getCurrentUserId, PlanPurchase } from '../lib/planService';
+import { PaymentModal } from '../components/PaymentModal';
 
 // Main Component
 const Plans = () => {
@@ -16,6 +17,7 @@ const Plans = () => {
     const [activePlan, setActivePlan] = useState<PlanPurchase | null>(null);
     const [notice, setNotice] = useState<string | null>(null);
     const [loadingPlans, setLoadingPlans] = useState(true);
+    const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
     const returnTo = searchParams.get('returnTo') || '/dashboard';
     const reason = searchParams.get('reason');
@@ -134,7 +136,16 @@ const Plans = () => {
         }
 
         setSelectedPlan(planId);
+        setIsPaymentModalOpen(true);
+        // Temporariamente desabilitado - aguardando integração Stripe
+        // handlePaymentSuccess();
+    };
+
+    const handlePaymentSuccess = async () => {
+        if (!selectedPlan) return;
+
         setLoading(true);
+        setIsPaymentModalOpen(false);
 
         try {
             const userId = await getCurrentUserId();
@@ -143,17 +154,17 @@ const Plans = () => {
                 return;
             }
 
-            const newPlan = await createPlanPurchase(userId, planId);
+            const newPlan = await createPlanPurchase(userId, selectedPlan);
             setActivePlan(newPlan);
             setPlanHistory((prev) => [newPlan, ...prev]);
             navigate(returnTo);
 
         } catch (error) {
-            console.error('Error selecting plan:', error);
-            setNotice('Não foi possível ativar o plano. Tente novamente.');
+            console.error('Error activating plan:', error);
+            setNotice('Pagamento confirmado, mas houve erro ao ativar o plano. Contate o suporte.');
         } finally {
             setLoading(false);
-            setSelectedPlan(null); // Reset selection
+            setSelectedPlan(null);
         }
     };
 
@@ -274,11 +285,22 @@ const Plans = () => {
 
             {/* Footer Note */}
             <div className="text-center px-4 pb-4">
-                <p className="text-[10px] text-slate-500 leading-relaxed">
-                    * Os valores são referentes a um ciclo de acesso.
-                    <br />Complete o ciclo atual para desbloquear o próximo nível.
+                <p className="text-[10px] text-slate-500 leading-relaxed font-bold">
+                    * ATENÇÃO: Os créditos de validação NÃO ACUMULAM.
+                    <br />Qualquer saldo restante expira automaticamente ao final do ciclo atual ({PLANS_CONFIG.starter.maxValidations}h duração média).
                 </p>
             </div>
+
+            {/* Temporariamente desabilitado - aguardando integração Stripe */}
+            {selectedPlan && (
+                <PaymentModal
+                    isOpen={isPaymentModalOpen}
+                    onClose={() => setIsPaymentModalOpen(false)}
+                    planId={selectedPlan}
+                    onSuccess={handlePaymentSuccess}
+                    amount={plans.find(p => p.id === selectedPlan)?.price || 0}
+                />
+            )}
         </AppLayout>
     );
 };

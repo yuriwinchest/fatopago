@@ -46,6 +46,19 @@ export function useDashboard() {
                 finalTasks = MOCK_NEWS;
             }
 
+            // Apply rewards policy
+            // Import dynamically to avoid circular dependency issues if any, although unlikely here
+            // But better to just use the helper we just created
+            const { getRewardByCategory } = await import('../lib/planRules');
+
+            finalTasks = finalTasks.map(t => ({
+                ...t,
+                content: {
+                    ...t.content,
+                    reward: getRewardByCategory(t.content.category)
+                }
+            }));
+
             setTasks(finalTasks);
         } catch (error) {
             console.error('Error loading dashboard:', error);

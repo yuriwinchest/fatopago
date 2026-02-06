@@ -36,6 +36,17 @@ export function useProfile() {
                 return;
             }
 
+            // 1. Get Current Cycle Start
+            const cycleRes = await supabase
+                .from('news_tasks')
+                .select('cycle_start_at')
+                .order('cycle_start_at', { ascending: false })
+                .limit(1)
+                .single();
+            
+            const currentCycleStart = cycleRes.data?.cycle_start_at;
+
+            // 2. Fetch Profile & Filtered History
             const [profileRes, historyRes] = await Promise.all([
                 supabase.from('profiles').select('*').eq('id', user.id).single(),
                 supabase
@@ -49,6 +60,7 @@ export function useProfile() {
                         )
                     `)
                     .eq('user_id', user.id)
+                    .gte('created_at', currentCycleStart || new Date(0).toISOString()) // Filter by cycle start
                     .order('created_at', { ascending: false })
             ]);
 

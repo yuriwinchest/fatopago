@@ -1,9 +1,48 @@
-import { ArrowRight, CheckCircle, Users, ShieldCheck, Wallet, PlayCircle, Star, AlertTriangle, Zap, Crown, Shield, Check, Clock, PlusCircle, RefreshCw } from 'lucide-react';
+import { ArrowRight, CheckCircle, Users, Wallet, PlayCircle, Star, AlertTriangle, Zap, Crown, Shield, Check, Clock, PlusCircle, RefreshCw, MapPin, Search, Globe, Map, Trophy } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { PLANS_CONFIG } from '../lib/planRules';
+import { useLocation } from '../hooks/useLocation';
+import { supabase } from '../lib/supabase';
+import { useState } from 'react';
 
 const LandingPage = () => {
     const navigate = useNavigate();
+    const { states, cities, fetchCities } = useLocation();
+    const [searchName, setSearchName] = useState('');
+    const [searchState, setSearchState] = useState('');
+    const [searchCity, setSearchCity] = useState('');
+    const [foundUser, setFoundUser] = useState<any>(null);
+    const [isSearching, setIsSearching] = useState(false);
+    const [hasSearched, setHasSearched] = useState(false);
+
+    const handleSearch = async () => {
+        if (!searchName && !searchState && !searchCity) return;
+
+        setIsSearching(true);
+        setHasSearched(true);
+        setFoundUser(null);
+
+        try {
+            let query = supabase.from('profiles').select('*');
+
+            if (searchName) query = query.ilike('name', `%${searchName}%`);
+            if (searchState) query = query.eq('state', searchState);
+            if (searchCity) query = query.eq('city', searchCity);
+
+            const { data, error } = await query.limit(1).maybeSingle();
+
+            if (error) {
+                console.error('Error searching user:', error);
+            } else if (data) {
+                setFoundUser(data);
+            }
+        } catch (e) {
+            console.error('Search exception:', e);
+        } finally {
+            setIsSearching(false);
+        }
+    };
+
 
     const stats = [
         { label: 'Usuários Ativos', value: '150k+', icon: <Users className="w-5 h-5 text-purple-400" /> },
@@ -101,38 +140,288 @@ const LandingPage = () => {
                             Ver Planos <PlayCircle className="w-5 h-5" />
                         </button>
                     </div>
+                </div>
 
-                    {/* App Preview Image Mockup */}
-                    <div className="relative max-w-5xl mx-auto rounded-[40px] border border-white/10 bg-[#1A1040]/50 p-2 shadow-2xl overflow-hidden group">
-                        <div className="absolute inset-0 bg-gradient-to-t from-[#0F0529] to-transparent z-10" />
-                        <div className="rounded-[32px] overflow-hidden bg-slate-900 aspect-[16/9] flex items-center justify-center relative">
-                            {/* Placeholder/Mockup of the app */}
-                            <div className="absolute inset-0 bg-gradient-to-br from-purple-900/40 via-transparent to-black/40" />
-                            <div className="z-20 text-center scale-75 md:scale-100">
-                                <div className="bg-[#2e0259] p-8 rounded-[40px] shadow-2xl border border-white/10 max-w-md">
-                                    <div className="flex justify-between items-center mb-6">
-                                        <div className="text-left">
-                                            <p className="text-[10px] text-purple-300 font-bold uppercase tracking-widest">Saldo Atual</p>
-                                            <p className="text-3xl font-black text-green-400">R$ 1.250,00</p>
+                {/* Ranking Section */}
+                <div className="w-full max-w-7xl mx-auto flex flex-col gap-8 relative z-20 mt-16">
+                    {/* Cycle Status Banner */}
+                    <div className="max-w-7xl mx-auto mb-8 bg-white/5 border border-white/10 rounded-2xl p-4 flex flex-col md:flex-row items-center justify-between gap-4 backdrop-blur-sm">
+                        <div className="flex items-center gap-3">
+                            <div className="flex relative">
+                                <span className="relative flex h-3 w-3">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                                </span>
+                            </div>
+                            <p className="text-white text-sm font-bold flex items-center gap-2">
+                                Ciclo Atual em Andamento <span className="text-slate-500 text-xs font-normal">•</span> <span className="text-purple-300 text-xs">Atualizando em tempo real</span>
+                            </p>
+                        </div>
+                        <div className="flex items-center gap-2 bg-black/30 px-3 py-1.5 rounded-lg border border-white/5">
+                            <Trophy className="w-3.5 h-3.5 text-yellow-500" />
+                            <p className="text-xs text-slate-300 font-medium">
+                                Último Fechamento: <span className="text-white font-bold">Hoje, 17:00</span>
+                            </p>
+                        </div>
+                    </div>
+
+
+                    {/* New: Check Personal Rank Card */}
+                    <div className="bg-[#2E0259]/80 border border-purple-500/30 rounded-[32px] p-8 md:p-10 shadow-2xl relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 w-96 h-96 bg-purple-500/10 blur-[100px] rounded-full -z-10 pointer-events-none" />
+                        <div className="flex flex-col xl:flex-row items-center gap-8 relative z-10">
+                            <div className="flex-1 text-center xl:text-left">
+                                <h3 className="text-2xl md:text-3xl font-black text-white mb-2">
+                                    Consulte sua Posição
+                                </h3>
+                                <p className="text-slate-300 text-sm md:text-base leading-relaxed">
+                                    Quer saber em que lugar você ou outro validador está no ranking da sua cidade?
+                                    Pesquise agora e veja quantas notícias foram validadas.
+                                </p>
+                            </div>
+                            <div className="w-full xl:w-auto flex flex-col sm:flex-row gap-3">
+                                <div className="relative w-full sm:w-64">
+                                    <input
+                                        type="text"
+                                        value={searchName}
+                                        onChange={(e) => setSearchName(e.target.value)}
+                                        placeholder="Buscar pelo nome..."
+                                        className="w-full h-12 bg-black/30 border border-white/10 rounded-xl px-4 pl-11 text-sm text-white focus:outline-none focus:border-purple-500 transition-all placeholder:text-slate-500"
+                                    />
+                                    <Search className="w-5 h-5 text-slate-400 absolute left-3.5 top-3.5" />
+                                </div>
+
+                                <div className="relative w-full sm:w-32">
+                                    <select
+                                        value={searchState}
+                                        onChange={(e) => {
+                                            setSearchState(e.target.value);
+                                            fetchCities(e.target.value);
+                                        }}
+                                        className="w-full h-12 bg-black/30 border border-white/10 rounded-xl px-4 pl-8 text-sm text-white focus:outline-none focus:border-purple-500 transition-all appearance-none cursor-pointer"
+                                    >
+                                        <option value="">UF</option>
+                                        {states.map(state => (
+                                            <option key={state.id} value={state.sigla} className="bg-[#2E0259]">{state.sigla}</option>
+                                        ))}
+                                    </select>
+                                    <Map className="w-4 h-4 text-slate-400 absolute left-3 top-4 pointer-events-none" />
+                                </div>
+
+                                <div className="relative w-full sm:w-48">
+                                    <select
+                                        value={searchCity}
+                                        onChange={(e) => setSearchCity(e.target.value)}
+                                        disabled={!searchState}
+                                        className="w-full h-12 bg-black/30 border border-white/10 rounded-xl px-4 pl-9 text-sm text-white focus:outline-none focus:border-purple-500 transition-all appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        <option value="">Cidade</option>
+                                        {cities.map(city => (
+                                            <option key={city.id} value={city.nome} className="bg-[#2E0259]">{city.nome}</option>
+                                        ))}
+                                    </select>
+                                    <MapPin className="w-4 h-4 text-slate-400 absolute left-3 top-4 pointer-events-none" />
+                                </div>
+
+                                <button
+                                    onClick={handleSearch}
+                                    disabled={isSearching}
+                                    className="h-12 px-6 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-xl shadow-lg shadow-purple-500/20 transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-wait shrink-0 w-full sm:w-auto"
+                                >
+                                    {isSearching ? <RefreshCw className="w-4 h-4 animate-spin" /> : 'Consultar'}
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Search Results */}
+                        {foundUser && (
+                            <div className="mt-8 bg-white/5 border border-white/10 rounded-2xl p-4 flex items-center gap-4 animate-in fade-in slide-in-from-top-4">
+                                <div className="relative shrink-0">
+                                    <div className="w-16 h-16 rounded-full p-0.5 border-2 border-green-400">
+                                        <img src={`https://ui-avatars.com/api/?name=${foundUser.name}&background=random`} alt={foundUser.name} className="w-full h-full rounded-full object-cover" />
+                                    </div>
+                                </div>
+                                <div className="flex-1">
+                                    <h4 className="text-white font-bold text-lg">{foundUser.name} {foundUser.lastname || ''}</h4>
+                                    <p className="text-slate-400 text-sm flex items-center gap-1.5">
+                                        <MapPin className="w-3.5 h-3.5" /> {foundUser.city}, {foundUser.state}
+                                    </p>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-green-400 font-black text-xl">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(foundUser.current_balance || 0)}</p>
+                                    <p className="text-slate-500 text-xs font-bold uppercase">Saldo Atual</p>
+                                </div>
+                            </div>
+                        )}
+
+                        {hasSearched && !foundUser && !isSearching && (
+                            <div className="mt-8 text-center text-slate-400 text-sm animate-in fade-in">
+                                Nenhum validador encontrado com esses critérios.
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        {/* 1. Ranking Nacional */}
+                        <div className="bg-[#1A0B2E] rounded-[32px] shadow-2xl border border-white/5 overflow-hidden flex flex-col hover:scale-[1.01] transition-transform duration-300 group">
+                            <div className="p-6 pb-4 border-b border-white/5 bg-white/[0.02]">
+                                <div className="flex items-center justify-between mb-4">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center">
+                                            <Globe className="w-4 h-4 text-purple-400" />
                                         </div>
-                                        <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center">
-                                            <ShieldCheck className="w-6 h-6 text-purple-300" />
+                                        <div>
+                                            <p className="text-[10px] text-purple-300 font-bold uppercase tracking-widest">Ranking</p>
+                                            <p className="text-lg font-black text-white leading-none">Nacional</p>
                                         </div>
                                     </div>
-                                    <div className="space-y-3">
-                                        <div className="h-12 w-full bg-white/5 rounded-xl border border-white/5 flex items-center px-4 gap-3">
-                                            <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_10px_#22c55e]" />
-                                            <div className="h-2 w-32 bg-white/10 rounded" />
+                                    <span className="bg-gradient-to-r from-purple-500 to-indigo-500 text-white text-[10px] font-bold px-3 py-1 rounded-full shadow-lg">TOP 100</span>
+                                </div>
+                            </div>
+                            <div className="flex-1 overflow-y-auto max-h-[500px] px-4 py-4 space-y-2 custom-scrollbar">
+                                {[
+                                    { name: "Carlos Silva", loc: "São Paulo, SP", pts: "R$ 450,00", img: "https://i.pravatar.cc/150?u=1", rank: 1, count: 450 },
+                                    { name: "Ana Pereira", loc: "Rio de Janeiro, RJ", pts: "R$ 380,50", img: "https://i.pravatar.cc/150?u=2", rank: 2, count: 380 },
+                                    { name: "Marcos Souza", loc: "Curitiba, PR", pts: "R$ 310,25", img: "https://i.pravatar.cc/150?u=3", rank: 3, count: 310 },
+                                    { name: "Pedro Santos", loc: "Salvador, BA", pts: "R$ 150,00", img: "https://i.pravatar.cc/150?u=5", rank: 4, count: 150 },
+                                    { name: "Júlia Lima", loc: "Belo Horizonte, MG", pts: "R$ 290,00", img: "https://i.pravatar.cc/150?u=4", rank: 5, count: 290 },
+                                    { name: "Roberto Junior", loc: "Campinas, SP", pts: "R$ 310,00", img: "https://i.pravatar.cc/150?u=6", rank: 6, count: 140 },
+                                    { name: "Fernanda Costa", loc: "Santos, SP", pts: "R$ 280,50", img: "https://i.pravatar.cc/150?u=7", rank: 7, count: 125 },
+                                ].map((user, i) => (
+                                    <div key={i} className={`flex items-center gap-3 p-3 rounded-2xl border transition-all hover:bg-white/5 ${i === 0 ? 'bg-gradient-to-r from-yellow-500/10 to-transparent border-yellow-500/20' : 'bg-transparent border-white/5'}`}>
+                                        <div className="relative shrink-0">
+                                            <div className={`w-10 h-10 rounded-full p-0.5 ${i === 0 ? 'border-2 border-yellow-400' : 'border border-white/10'}`}>
+                                                <img src={user.img} alt={user.name} className="w-full h-full rounded-full object-cover" />
+                                            </div>
+                                            {i === 0 && <Crown className="absolute -top-2 -right-1 w-4 h-4 text-yellow-400 fill-yellow-400 animate-bounce" />}
+                                            <div className={`absolute -bottom-1 -right-1 w-5 h-5 flex items-center justify-center rounded-full text-[9px] font-bold border ${i === 0 ? 'bg-yellow-500 text-black border-yellow-400' : 'bg-slate-800 text-slate-300 border-slate-700'}`}>{user.rank}</div>
                                         </div>
-                                        <div className="h-12 w-full bg-white/5 rounded-xl border border-white/5 flex items-center px-4 gap-3">
-                                            <div className="w-2 h-2 rounded-full bg-blue-500" />
-                                            <div className="h-2 w-24 bg-white/10 rounded" />
+                                        <div className="flex-1 min-w-0 text-left">
+                                            <p className={`text-sm font-bold truncate ${i === 0 ? 'text-yellow-100' : 'text-white'}`}>{user.name}</p>
+                                            <p className="text-[10px] text-slate-500 truncate flex items-center gap-1"><MapPin className="w-2.5 h-2.5" /> {user.loc}</p>
+                                        </div>
+                                        <div className="text-right flex flex-col items-end">
+                                            <p className={`font-black text-sm ${i === 0 ? 'text-yellow-400' : 'text-green-400'}`}>{user.pts}</p>
+                                            <p className="text-[10px] text-slate-500 font-medium bg-white/5 px-1.5 py-0.5 rounded flex items-center gap-1">
+                                                <CheckCircle className="w-2.5 h-2.5" /> {user.count}
+                                            </p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* 2. Ranking Estadual */}
+                        <div className="bg-[#1A0B2E] rounded-[32px] shadow-2xl border border-white/5 overflow-hidden flex flex-col hover:scale-[1.01] transition-transform duration-300 group">
+                            <div className="p-6 pb-4 border-b border-white/5 bg-white/[0.02]">
+                                <div className="flex items-center justify-between mb-4">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-8 h-8 rounded-full bg-pink-500/20 flex items-center justify-center">
+                                            <Map className="w-4 h-4 text-pink-400" />
+                                        </div>
+                                        <div>
+                                            <p className="text-[10px] text-pink-300 font-bold uppercase tracking-widest">Ranking</p>
+                                            <p className="text-lg font-black text-white leading-none">Estadual</p>
                                         </div>
                                     </div>
                                 </div>
+                                <div className="relative">
+                                    <input
+                                        type="text"
+                                        placeholder="Filtrar estado..."
+                                        className="w-full bg-black/20 border border-white/10 rounded-xl px-3 py-2.5 pl-9 text-xs text-white focus:outline-none focus:border-pink-500/50 transition-all placeholder:text-slate-500"
+                                    />
+                                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-3" />
+                                </div>
                             </div>
-                            {/* Background Texture */}
-                            <div className="absolute inset-0 opacity-20 pointer-events-none" style={{ backgroundImage: 'radial-gradient(#ffffff 1px, transparent 1px)', backgroundSize: '30px 30px' }} />
+                            <div className="flex-1 overflow-y-auto max-h-[500px] px-4 py-4 space-y-2 custom-scrollbar">
+                                {/* Mocking SP State Data */}
+                                {[
+                                    { name: "Carlos Silva", loc: "São Paulo, SP", pts: "R$ 450,00", img: "https://i.pravatar.cc/150?u=1", rank: 1, count: 450 },
+                                    { name: "Roberto Junior", loc: "Campinas, SP", pts: "R$ 310,00", img: "https://i.pravatar.cc/150?u=6", rank: 2, count: 310 },
+                                    { name: "Fernanda Costa", loc: "Santos, SP", pts: "R$ 280,50", img: "https://i.pravatar.cc/150?u=7", rank: 3, count: 280 },
+                                    { name: "Lucas Mota", loc: "São Paulo, SP", pts: "R$ 210,00", img: "https://i.pravatar.cc/150?u=8", rank: 4, count: 210 },
+                                    { name: "Patricia Lima", loc: "Ribeirão Preto, SP", pts: "R$ 190,00", img: "https://i.pravatar.cc/150?u=9", rank: 5, count: 190 },
+                                    { name: "Marcos Souza", loc: "São Paulo, SP", pts: "R$ 180,00", img: "https://i.pravatar.cc/150?u=3", rank: 6, count: 180 },
+                                ].map((user, i) => (
+                                    <div key={i} className={`flex items-center gap-3 p-3 rounded-2xl border transition-all hover:bg-white/5 ${i === 0 ? 'bg-gradient-to-r from-pink-500/10 to-transparent border-pink-500/20' : 'bg-transparent border-white/5'}`}>
+                                        <div className="relative shrink-0">
+                                            <div className={`w-10 h-10 rounded-full p-0.5 ${i === 0 ? 'border-2 border-pink-400' : 'border border-white/10'}`}>
+                                                <img src={user.img} alt={user.name} className="w-full h-full rounded-full object-cover" />
+                                            </div>
+                                            {i === 0 && <Crown className="absolute -top-2 -right-1 w-4 h-4 text-pink-400 fill-pink-400 animate-bounce" />}
+                                            <div className={`absolute -bottom-1 -right-1 w-5 h-5 flex items-center justify-center rounded-full text-[9px] font-bold border ${i === 0 ? 'bg-pink-500 text-black border-pink-400' : 'bg-slate-800 text-slate-300 border-slate-700'}`}>{user.rank}</div>
+                                        </div>
+                                        <div className="flex-1 min-w-0 text-left">
+                                            <p className={`text-sm font-bold truncate ${i === 0 ? 'text-pink-100' : 'text-white'}`}>{user.name}</p>
+                                            <p className="text-[10px] text-slate-500 truncate flex items-center gap-1"><MapPin className="w-2.5 h-2.5" /> {user.loc}</p>
+                                        </div>
+                                        <div className="text-right flex flex-col items-end">
+                                            <p className={`font-black text-sm ${i === 0 ? 'text-pink-400' : 'text-green-400'}`}>{user.pts}</p>
+                                            <p className="text-[10px] text-slate-500 font-medium bg-white/5 px-1.5 py-0.5 rounded flex items-center gap-1">
+                                                <CheckCircle className="w-2.5 h-2.5" /> {user.count}
+                                            </p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* 3. Ranking Municipal */}
+                        <div className="bg-[#1A0B2E] rounded-[32px] shadow-2xl border border-white/5 overflow-hidden flex flex-col hover:scale-[1.01] transition-transform duration-300 group">
+                            <div className="p-6 pb-4 border-b border-white/5 bg-white/[0.02]">
+                                <div className="flex items-center justify-between mb-4">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-8 h-8 rounded-full bg-cyan-500/20 flex items-center justify-center">
+                                            <MapPin className="w-4 h-4 text-cyan-400" />
+                                        </div>
+                                        <div>
+                                            <p className="text-[10px] text-cyan-300 font-bold uppercase tracking-widest">Ranking</p>
+                                            <p className="text-lg font-black text-white leading-none">Municipal</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="relative">
+                                    <input
+                                        type="text"
+                                        placeholder="Filtrar cidade..."
+                                        className="w-full bg-black/20 border border-white/10 rounded-xl px-3 py-2.5 pl-9 text-xs text-white focus:outline-none focus:border-cyan-500/50 transition-all placeholder:text-slate-500"
+                                    />
+                                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-3" />
+                                </div>
+                            </div>
+                            <div className="flex-1 overflow-y-auto max-h-[500px] px-4 py-4 space-y-2 custom-scrollbar">
+                                {/* Mocking SP Capital Data */}
+                                {[
+                                    { name: "Carlos Silva", loc: "São Paulo, SP", pts: "R$ 450,00", img: "https://i.pravatar.cc/150?u=1", rank: 1, count: 450 },
+                                    { name: "Lucas Mota", loc: "São Paulo, SP", pts: "R$ 210,00", img: "https://i.pravatar.cc/150?u=8", rank: 2, count: 210 },
+                                    { name: "Amanda Nunes", loc: "São Paulo, SP", pts: "R$ 180,25", img: "https://i.pravatar.cc/150?u=10", rank: 3, count: 180 },
+                                    { name: "Ricardo Gomes", loc: "São Paulo, SP", pts: "R$ 145,00", img: "https://i.pravatar.cc/150?u=11", rank: 4, count: 145 },
+                                    { name: "Beatriz Alves", loc: "São Paulo, SP", pts: "R$ 120,50", img: "https://i.pravatar.cc/150?u=12", rank: 5, count: 120 },
+                                    { name: "User 6", loc: "São Paulo, SP", pts: "R$ 110,00", img: "https://i.pravatar.cc/150?u=13", rank: 6, count: 110 },
+                                    { name: "User 7", loc: "São Paulo, SP", pts: "R$ 90,00", img: "https://i.pravatar.cc/150?u=14", rank: 7, count: 90 },
+                                ].map((user, i) => (
+                                    <div key={i} className={`flex items-center gap-3 p-3 rounded-2xl border transition-all hover:bg-white/5 ${i === 0 ? 'bg-gradient-to-r from-cyan-500/10 to-transparent border-cyan-500/20' : 'bg-transparent border-white/5'}`}>
+                                        <div className="relative shrink-0">
+                                            <div className={`w-10 h-10 rounded-full p-0.5 ${i === 0 ? 'border-2 border-cyan-400' : 'border border-white/10'}`}>
+                                                <img src={user.img} alt={user.name} className="w-full h-full rounded-full object-cover" />
+                                            </div>
+                                            {i === 0 && <Crown className="absolute -top-2 -right-1 w-4 h-4 text-cyan-400 fill-cyan-400 animate-bounce" />}
+                                            <div className={`absolute -bottom-1 -right-1 w-5 h-5 flex items-center justify-center rounded-full text-[9px] font-bold border ${i === 0 ? 'bg-cyan-500 text-black border-cyan-400' : 'bg-slate-800 text-slate-300 border-slate-700'}`}>{user.rank}</div>
+                                        </div>
+                                        <div className="flex-1 min-w-0 text-left">
+                                            <p className={`text-sm font-bold truncate ${i === 0 ? 'text-cyan-100' : 'text-white'}`}>{user.name}</p>
+                                            <p className="text-[10px] text-slate-500 truncate flex items-center gap-1"><MapPin className="w-2.5 h-2.5" /> {user.loc}</p>
+                                        </div>
+                                        <div className="text-right flex flex-col items-end">
+                                            <p className={`font-black text-sm ${i === 0 ? 'text-cyan-400' : 'text-green-400'}`}>{user.pts}</p>
+                                            <p className="text-[10px] text-slate-500 font-medium bg-white/5 px-1.5 py-0.5 rounded flex items-center gap-1">
+                                                <CheckCircle className="w-2.5 h-2.5" /> {user.count}
+                                            </p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -161,7 +450,7 @@ const LandingPage = () => {
                 <div className="max-w-7xl mx-auto">
                     <div className="bg-gradient-to-br from-red-950/40 via-[#1A1040]/60 to-purple-950/40 border-2 border-red-500/20 rounded-[40px] p-8 md:p-12 relative overflow-hidden group hover:border-red-500/40 transition-all">
                         <div className="absolute top-0 right-0 w-64 h-64 bg-red-500/5 blur-[80px] rounded-full" />
-                        
+
                         <div className="relative z-10 flex flex-col md:flex-row items-center gap-8">
                             <div className="flex-shrink-0">
                                 <div className="w-20 h-20 md:w-24 md:h-24 bg-red-500/10 rounded-3xl flex items-center justify-center border-2 border-red-500/30 group-hover:scale-110 transition-transform">
@@ -175,10 +464,10 @@ const LandingPage = () => {
                                     <span className="text-red-400">Falsas Verificadas</span>
                                 </h2>
                                 <p className="text-slate-300 text-base md:text-lg leading-relaxed mb-6 max-w-2xl">
-                                    Veja em tempo real as notícias que foram identificadas como falsas pela nossa comunidade de verificadores. 
+                                    Veja em tempo real as notícias que foram identificadas como falsas pela nossa comunidade de verificadores.
                                     <span className="text-white font-bold"> Transparência total</span> com justificativas e provas.
                                 </p>
-                                
+
                                 <div className="flex flex-col sm:flex-row items-center justify-center md:justify-start gap-4">
                                     <button
                                         onClick={() => navigate('/noticias-falsas')}
@@ -358,7 +647,7 @@ const LandingPage = () => {
                                 <h3 className="text-2xl md:text-4xl font-black mb-8 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">
                                     O que é o Ciclo no Fatopago?
                                 </h3>
-                                
+
                                 <div className="grid md:grid-cols-2 gap-12">
                                     <div className="space-y-6">
                                         <div className="bg-white/5 p-6 rounded-3xl border border-white/10">
@@ -380,7 +669,7 @@ const LandingPage = () => {
                                                 Compra de pacotes durante o ciclo
                                             </h4>
                                             <p className="text-slate-400 text-sm leading-relaxed">
-                                                Durante o ciclo do Fatopago, você pode comprar quantos pacotes quiser. 
+                                                Durante o ciclo do Fatopago, você pode comprar quantos pacotes quiser.
                                                 Os valores adquiridos se somam, aumentando o seu saldo disponível.
                                             </p>
                                         </div>
@@ -459,6 +748,7 @@ const LandingPage = () => {
                         <div className="flex gap-6">
                             <a href="#" className="text-slate-400 hover:text-white transition-colors">Termos</a>
                             <a href="#" className="text-slate-400 hover:text-white transition-colors">Privacidade</a>
+                            <button onClick={() => navigate('/politica-ganhos')} className="text-slate-400 hover:text-white transition-colors text-sm font-medium">Política de Ganhos</button>
                             <a href="#" className="text-slate-400 hover:text-white transition-colors">Contato</a>
                         </div>
                         <p className="text-slate-600 text-xs font-bold uppercase tracking-widest">© 2026 FATOPAGO. TODOS OS DIREITOS RESERVADOS.</p>

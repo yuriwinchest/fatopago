@@ -11,7 +11,7 @@ export const CycleTimer = ({ compact = false }: CycleTimerProps) => {
     const [gapRemaining, setGapRemaining] = useState(0);
 
     useEffect(() => {
-        if (!process.env.NODE_ENV || process.env.NODE_ENV === 'development') {
+        if (import.meta.env.DEV) {
             console.log('CycleTimer Debug:', { timeRemaining, cycleInfo });
         }
 
@@ -57,7 +57,6 @@ export const CycleTimer = ({ compact = false }: CycleTimerProps) => {
     const elapsedTime = totalDuration - timeRemaining;
     const progressPercentage = Math.min(100, Math.max(0, (elapsedTime / totalDuration) * 100));
 
-    // Determine colors
     // Determine colors
     let bgBase: string, textBase: string, iconBase: string, bgLow: string, textLow: string;
 
