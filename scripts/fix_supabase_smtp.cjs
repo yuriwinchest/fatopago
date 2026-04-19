@@ -5,10 +5,15 @@ require('dotenv').config({ path: path.join(__dirname, '../.env.local') });
 async function fixSupabaseSmtp() {
     const projectRef = 'raxjzfvunjxqbxswuipp';
     const accessToken = process.env.SUPABASE_ACCESS_TOKEN;
-    const resendApiKey = 're_V4V2C7u1_sVLK5iUnebgfnTwGEprYbT4L';
+    const resendApiKey = process.env.RESEND_API_KEY;
 
     if (!accessToken) {
         console.error('SUPABASE_ACCESS_TOKEN não encontrado no .env.local');
+        return;
+    }
+
+    if (!resendApiKey) {
+        console.error('RESEND_API_KEY não encontrado no .env.local — adicione a nova chave gerada no painel Resend.');
         return;
     }
 

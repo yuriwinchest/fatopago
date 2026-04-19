@@ -1,9 +1,17 @@
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '../.env.local') });
+
 async function testResendApi() {
-    const API_KEY = 're_V4V2C7u1_sVLK5iUnebgfnTwGEprYbT4L';
+    const API_KEY = process.env.RESEND_API_KEY;
     const FROM_EMAIL = 'acesso@auth.fatopago.com'; // Use o remetente verificado na Resend
     const TO_EMAIL = 'yuriwinchest@gmail.com'; // Enviar para o seu email de teste
-    
-    console.log("Testing Resend API with key:", API_KEY);
+
+    if (!API_KEY) {
+        console.error('RESEND_API_KEY não encontrado no .env.local — adicione a nova chave gerada no painel Resend.');
+        return;
+    }
+
+    console.log("Testing Resend API (key mascarada):", API_KEY.slice(0, 6) + '...');
     
     try {
         const response = await fetch('https://api.resend.com/emails', {
