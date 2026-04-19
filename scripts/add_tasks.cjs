@@ -1,8 +1,13 @@
 
 const https = require('https');
 
-const projectRef = 'raxjzfvunjxqbxswuipp';
-const pat = 'sbp_aecdc8b279a2adb5732e9b3c127a042b3c130db1'; // From .env
+const projectRef = process.env.SUPABASE_PROJECT_REF;
+if (!projectRef) throw new Error('SUPABASE_PROJECT_REF environment variable is required');
+const pat = process.env.SUPABASE_ACCESS_TOKEN;
+
+if (!pat) {
+    throw new Error('Defina SUPABASE_ACCESS_TOKEN no ambiente.');
+}
 
 const news = [
     {

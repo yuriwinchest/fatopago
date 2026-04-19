@@ -11,7 +11,7 @@ console.log('Creating app.tar...');
 // Using tar command since it's available
 try {
     // Windows tar (bsdtar) supports --exclude
-    const command = `tar -cf "app.tar" --exclude "node_modules" --exclude ".git" --exclude ".env" --exclude "dist" --exclude "app.tar" .`;
+    const command = `tar -cf "app.tar" --exclude "node_modules" --exclude ".git" --exclude ".env" --exclude "dist" --exclude "app.tar" --exclude ".trae" --exclude ".agent" --exclude ".gemini" --exclude ".vscode" --exclude ".cursor" --exclude ".claude" --exclude ".codex" --exclude ".factory" --exclude ".kilocode" --exclude ".opencode" --exclude ".vercel" --exclude "backup_legacy" --exclude "temp*" --exclude "vidoes" .`;
     execSync(command, { cwd: rootDir, stdio: 'inherit' });
     console.log('app.tar created successfully at', outputFile);
 } catch (error) {

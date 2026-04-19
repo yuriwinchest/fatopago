@@ -33,5 +33,9 @@ export const supabase =
                   getSession: async () => ({ data: { session: null }, error: null }),
                   getUser: async () => ({ data: { user: null }, error: notConfiguredError })
               },
-              from: () => createQueryStub()
+              from: () => createQueryStub(),
+              rpc: async () => ({ data: null, error: notConfiguredError }),
+              functions: {
+                  invoke: async () => ({ data: null, error: notConfiguredError })
+              }
           } as any);

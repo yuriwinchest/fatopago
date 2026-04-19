@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:developers.inter.co)",
+      "Bash(find /d/fatopago/src/pages -name *admin* -o -name *news*)",
+      "Bash(grep -E \"\\\\.\\(tsx?|jsx?\\)$\")",
+      "Bash(find /d/fatopago/supabase/functions -name *news* -o -name *admin*)",
+      "Bash(grep -B 3 -A 10 \"CREATE POLICY.*news_tasks\\\\|ALTER TABLE.*news_tasks.*POLICY\\\\|news_tasks.*RLS\" /d/fatopago/supabase/migrations/*.sql)",
+      "Bash(grep -r \"assert_fatopago_admin\\\\|assert_news_admin\\\\|is_admin_user\\\\|is_collaborator\" /d/fatopago/supabase/migrations/*.sql)",
+      "Bash(node -e \":*)",
+      "Bash(npm run:*)",
+      "Bash(node scripts/deploy_quick.cjs)",
+      "Bash(grep -l \"get_validation_cycle_meta\\\\|get_user_profile\\\\|get_financial\\\\|CREATE FUNCTION.*profile\\\\|CREATE FUNCTION.*validation\" /d/fatopago/supabase/migrations/*.sql)",
+      "Bash(grep -n \"financial_ledger\\\\|CREATE FUNCTION.*financial\\\\|CREATE FUNCTION.*transaction\" /d/fatopago/supabase/migrations/*.sql)",
+      "Bash(grep -n \"\\\\.from\\\\\\(''''transactions''''\\\\\\)\\\\|\\\\.from\\\\\\(''''validations''''\\\\\\)\\\\|\\\\.from\\\\\\(''''profiles''''\\\\\\)\" /d/fatopago/src/hooks/*.ts)",
+      "Bash(ls -lah /d/fatopago/supabase/migrations/*.sql)",
+      "Bash(grep -n \"current_balance\\\\|reputation_score\\\\|CREATE TABLE.*profiles\" /d/fatopago/supabase/migrations/*.sql)",
+      "Bash(grep -n \"submit_validation\\\\|CREATE FUNCTION.*submit\" /d/fatopago/supabase/migrations/*.sql)",
+      "Bash(grep -n \"compensatory_credit_balance\" /d/fatopago/supabase/migrations/*.sql)",
+      "Bash(npx tsc:*)"
+    ]
+  }
+}

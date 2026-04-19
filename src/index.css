@@ -4,7 +4,7 @@
 
 @layer base {
   :root {
-    --background: 270 50% 10%;
+    --background: 270 45% 15%;
     /* #12005E - brand-dark */
     --foreground: 210 40% 98%;
     --card: 0 0% 100%;
@@ -26,10 +26,13 @@
     --input: 214.3 31.8% 91.4%;
     --ring: 271 76% 53%;
     --radius: 0.75rem;
+    --platform-card-radius: 1.5rem;
+    --platform-surface-shadow: 0 16px 30px rgba(21, 10, 52, 0.3);
+    --platform-touch-target: 44px;
   }
 
   .dark {
-    --background: 270 50% 10%;
+    --background: 270 45% 15%;
     /* #12005E */
     --foreground: 210 40% 98%;
     --card: 222.2 84% 4.9%;
@@ -64,10 +67,164 @@
     /* Prevent pull-to-refresh on mobile */
   }
 
+  html {
+    /* Prevent iOS from unexpectedly resizing text. */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
   body {
     @apply bg-background text-foreground antialiased;
+    font-family: 'Plus Jakarta Sans', Inter, system-ui, sans-serif;
     font-feature-settings: "rlig" 1, "calt" 1;
     -webkit-tap-highlight-color: transparent;
     /* Remove gray tap highlight on mobile */
+  }
+}
+
+@layer utilities {
+  /* iOS/Android safe-area helpers (requires viewport-fit=cover). */
+  .pt-safe {
+    padding-top: env(safe-area-inset-top);
+  }
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .pl-safe {
+    padding-left: env(safe-area-inset-left);
+  }
+  .pr-safe {
+    padding-right: env(safe-area-inset-right);
+  }
+
+  /* Better mobile line breaks for big headlines (supported by modern Safari/Chrome). */
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .title-duo-gradient {
+    background-image:
+      radial-gradient(145% 110% at 10% 45%, rgba(220, 179, 255, 0.34) 0%, rgba(220, 179, 255, 0) 58%),
+      radial-gradient(130% 110% at 88% 58%, rgba(173, 119, 255, 0.32) 0%, rgba(173, 119, 255, 0) 64%),
+      linear-gradient(100deg, rgba(66, 42, 119, 0.92) 0%, rgba(101, 62, 170, 0.93) 52%, rgba(147, 97, 221, 0.9) 100%);
+    color: #ffffff;
+    -webkit-text-fill-color: #ffffff;
+    border: 1px solid rgba(203, 163, 255, 0.24);
+    padding: 0.03em 0.2em;
+    border-radius: 0.28em;
+    box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.18), 0 8px 18px rgba(88, 41, 162, 0.2);
+    text-shadow: 0 1px 1px rgba(8, 3, 20, 0.45);
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
+  }
+
+  /* Mobile hero title style (single rounded block like iOS screenshot). */
+  .hero-title-surface {
+    position: relative;
+    display: inline-block;
+    max-width: 100%;
+    border-radius: 22px;
+    border: 1px solid rgba(195, 154, 255, 0.28);
+    padding: 12px 16px 11px;
+    background-image:
+      radial-gradient(105% 130% at 15% 8%, rgba(212, 178, 255, 0.3) 0%, rgba(212, 178, 255, 0) 58%),
+      linear-gradient(132deg, rgba(127, 84, 224, 0.56) 0%, rgba(92, 54, 177, 0.52) 45%, rgba(44, 24, 96, 0.56) 100%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.14),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.2),
+      0 12px 28px rgba(16, 6, 42, 0.44);
+  }
+
+  .hero-title-surface::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background-image:
+      radial-gradient(70% 80% at 10% 18%, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0) 64%);
+    mix-blend-mode: overlay;
+    opacity: 0.35;
+  }
+
+  .hero-badge-surface {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border-radius: 9999px;
+    border: 1px solid rgba(120, 211, 255, 0.22);
+    background: rgba(36, 96, 178, 0.18);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    padding: 10px 14px;
+  }
+
+  @media (min-width: 768px) {
+    .hero-title-surface {
+      border-radius: 34px;
+      padding: 22px 24px 20px;
+      background-image:
+        radial-gradient(120% 120% at 18% 8%, rgba(206, 161, 255, 0.55) 0%, rgba(206, 161, 255, 0) 56%),
+        radial-gradient(120% 120% at 86% 70%, rgba(255, 120, 214, 0.22) 0%, rgba(255, 120, 214, 0) 58%),
+        linear-gradient(135deg, rgba(142, 86, 255, 0.55) 0%, rgba(112, 45, 216, 0.38) 55%, rgba(36, 14, 82, 0.35) 100%);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.12),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.22),
+        0 26px 60px rgba(18, 5, 41, 0.55);
+    }
+    .hero-badge-surface {
+      padding: 14px 20px;
+      gap: 10px;
+    }
+  }
+
+  /* Admin Premium Utilities */
+  .admin-glass-card {
+    @apply rounded-3xl border border-white/10 bg-white/[0.06] backdrop-blur-lg;
+    box-shadow: 
+      0 10px 40px -10px rgba(0, 0, 0, 0.4),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  }
+
+  .font-display {
+    font-family: inherit;
+    letter-spacing: inherit;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .font-tech {
+    font-family: inherit;
+    letter-spacing: inherit;
+  }
+
+  .bg-cosmic-void {
+    background: radial-gradient(circle at 0% 0%, #2e0259 0%, #1a0133 100%);
+  }
+
+  .text-glow-amber {
+    text-shadow: 0 0 20px rgba(251, 191, 36, 0.45);
+  }
+
+  .text-glow-cyan {
+    text-shadow: 0 0 20px rgba(34, 211, 238, 0.45);
+  }
+
+  /* [2026-04-15] Shimmer pra barra de progresso do ranking quando ninguem atingiu 100 ainda */
+  .ranking-progress-shimmer {
+    background-size: 200% 100%;
+    animation: ranking-progress-shimmer-slide 1.8s linear infinite;
+  }
+
+  @keyframes ranking-progress-shimmer-slide {
+    0% {
+      background-position: 200% 0;
+      opacity: 0.55;
+    }
+    50% {
+      opacity: 0.95;
+    }
+    100% {
+      background-position: -200% 0;
+      opacity: 0.55;
+    }
   }
 }

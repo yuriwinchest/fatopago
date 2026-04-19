@@ -1,68 +1,76 @@
-import { Home, CheckCircle, User, Wallet, Trophy } from 'lucide-react';
+// Navigation component for authenticated pages
+import { Home, CheckCircle, User, AlertTriangle, CreditCard } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { resolveIsAdminUser } from '../lib/authRouting';
 
-export const BottomNav = () => {
+const BottomNav = () => {
     const navigate = useNavigate();
     const location = useLocation();
 
+    const [isAdmin, setIsAdmin] = useState(false);
+
+    useEffect(() => {
+        const checkUser = async () => {
+            const module = await import('../lib/supabase');
+            const client = module.supabase;
+            if (!client?.auth?.getUser) return;
+            const { data: { user } } = await client.auth.getUser();
+            const isAdmin = await resolveIsAdminUser(user?.id);
+            if (isAdmin) {
+                setIsAdmin(true);
+            }
+        };
+        checkUser();
+    }, []);
+
     const isActive = (path: string) => location.pathname === path;
 
-    // Profile path fix since it's /profile
-    const isProfileActive = isActive('/profile');
-    const isHomeActive = isActive('/home');
-    const isRankingActive = isActive('/ranking');
-    const isFinanceiroActive = isActive('/financeiro');
-    const isHubActive = isActive('/validation/hub');
+    // Esconde a nav mobile APENAS quando admin esta no dashboard admin.
+    // Em qualquer outra rota, admin ve a nav normal de user pra conseguir
+    // navegar e testar como usuario real. Sem isso, admin em rota de user
+    // ficava ilhado (bug reportado em prod).
+    if (isAdmin && location.pathname.startsWith('/admin')) return null;
+
+    const navItems = [
+        { icon: <Home className="w-6 h-6" />, label: 'Home', path: '/dashboard' },
+        { icon: <CreditCard className="w-6 h-6" />, label: 'Planos', path: '/plans' },
+        {
+            icon: <CheckCircle className="w-8 h-8 text-white" />,
+            label: 'Validar',
+            path: '/validation',
+            isCenter: true
+        },
+        { icon: <AlertTriangle className="w-6 h-6" />, label: 'Falsas', path: '/noticias-falsas' },
+        { icon: <User className="w-6 h-6" />, label: 'Perfil', path: '/profile' }
+    ];
 
     return (
-        <div className="fixed bottom-0 left-0 right-0 bg-[#0F0826]/90 backdrop-blur-xl border-t border-white/5 px-4 py-3 flex justify-between items-center z-50 lg:hidden shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
-            {/* Home */}
-            <button
-                onClick={() => navigate('/home')}
-                className={`flex flex-col items-center gap-1 transition-all group ${isHomeActive ? 'text-purple-400' : 'text-slate-500 hover:text-white'}`}
-            >
-                <Home className={`w-5 h-5 ${isHomeActive ? 'scale-110' : 'group-hover:-translate-y-1'} transition-transform`} />
-                <span className="text-[9px] font-bold tracking-tighter">INÍCIO</span>
-            </button>
-
-            {/* Ranking */}
-            <button
-                onClick={() => navigate('/ranking')}
-                className={`flex flex-col items-center gap-1 transition-all group ${isRankingActive ? 'text-purple-400' : 'text-slate-500 hover:text-white'}`}
-            >
-                <Trophy className={`w-5 h-5 ${isRankingActive ? 'scale-110' : 'group-hover:-translate-y-1'} transition-transform`} />
-                <span className="text-[9px] font-bold tracking-tighter">RANKING</span>
-            </button>
-
-            {/* Primary Action - Register / Validate */}
-            <div className="relative -top-6">
-                <button
-                    onClick={() => navigate('/validation/hub')}
-                    className={`w-14 h-14 bg-gradient-to-br from-[#A855F7] to-[#7E22CE] rounded-2xl flex items-center justify-center shadow-[0_0_25px_rgba(138,44,226,0.6)] border-4 border-[#0F0826] hover:scale-110 active:scale-95 transition-all group overflow-hidden`}
-                >
-                    <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
-                    <CheckCircle className="w-6 h-6 text-white" />
-                </button>
-                <span className={`absolute -bottom-5 left-1/2 -translate-x-1/2 text-[9px] font-black tracking-widest ${isHubActive ? 'text-purple-300' : 'text-slate-500 opacity-80'}`}>VALIDAR</span>
-            </div>
-
-            {/* Wallet */}
-            <button
-                onClick={() => navigate('/financeiro')}
-                className={`flex flex-col items-center gap-1 transition-all group ${isFinanceiroActive ? 'text-purple-400' : 'text-slate-500 hover:text-white'}`}
-            >
-                <Wallet className={`w-5 h-5 ${isFinanceiroActive ? 'scale-110' : 'group-hover:-translate-y-1'} transition-transform`} />
-                <span className="text-[9px] font-bold tracking-tighter">CARTEIRA</span>
-            </button>
-
-            {/* Profile */}
-            <button
-                onClick={() => navigate('/profile')}
-                className={`flex flex-col items-center gap-1 transition-all group ${isProfileActive ? 'text-purple-400' : 'text-slate-500 hover:text-white'}`}
-            >
-                <User className={`w-5 h-5 ${isProfileActive ? 'scale-110' : 'group-hover:-translate-y-1'} transition-transform`} />
-                <span className="text-[9px] font-bold tracking-tighter">PERFIL</span>
-            </button>
+        <div className="pointer-events-none fixed bottom-0 left-0 right-0 z-[120] flex items-end justify-between border-t border-white/5 bg-[#0F0529]/95 px-[calc(1rem+env(safe-area-inset-left))] pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 backdrop-blur-md lg:hidden">
+            {navItems.map((item, idx) => (
+                item.isCenter ? (
+                    <div key={idx} className="relative -top-6">
+                        <button
+                            onClick={() => navigate(item.path)}
+                            className="pointer-events-auto flex h-16 w-16 transform flex-col items-center justify-center rounded-3xl border-4 border-[#0F0529] bg-purple-600 shadow-2xl shadow-purple-600/40 transition-transform active:scale-95"
+                        >
+                            {item.icon}
+                        </button>
+                    </div>
+                ) : (
+                    <button
+                        key={idx}
+                        onClick={() => navigate(item.path)}
+                        className={`pointer-events-auto flex flex-col items-center gap-1 transition-colors ${isActive(item.path) ? 'text-purple-400' : 'text-slate-500'
+                            }`}
+                    >
+                        {item.icon}
+                        <span className="text-[8px] font-black uppercase tracking-wider">{item.label}</span>
+                    </button>
+                )
+            ))}
         </div>
     );
 };
+
+export default BottomNav;

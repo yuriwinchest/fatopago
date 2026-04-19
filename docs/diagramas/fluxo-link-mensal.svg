@@ -1,0 +1,82 @@
+<svg width="1600" height="980" viewBox="0 0 1600 980" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="120" y1="60" x2="1480" y2="920" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2E0B63"/>
+      <stop offset="1" stop-color="#12051F"/>
+    </linearGradient>
+    <linearGradient id="panel" x1="240" y1="160" x2="1320" y2="860" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#5B2FB4" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#271046" stop-opacity="0.9"/>
+    </linearGradient>
+    <linearGradient id="box" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#7F46FF"/>
+      <stop offset="1" stop-color="#5323AF"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#FFE07A"/>
+      <stop offset="1" stop-color="#FF9D4D"/>
+    </linearGradient>
+    <filter id="shadow" x="-40" y="-40" width="220" height="220" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="14" stdDeviation="18" flood-color="#05010B" flood-opacity="0.4"/>
+    </filter>
+    <style>
+      .title { font: 800 48px 'Segoe UI', Arial, sans-serif; fill: #FFFFFF; }
+      .subtitle { font: 500 22px 'Segoe UI', Arial, sans-serif; fill: #D8CFFF; }
+      .step-title { font: 800 24px 'Segoe UI', Arial, sans-serif; fill: #FFFFFF; }
+      .step-body { font: 500 18px 'Segoe UI', Arial, sans-serif; fill: #EDE7FF; }
+      .chip { font: 800 15px 'Segoe UI', Arial, sans-serif; fill: #1E0B39; }
+      .footer { font: 600 18px 'Segoe UI', Arial, sans-serif; fill: #F8D879; }
+    </style>
+  </defs>
+
+  <rect width="1600" height="980" rx="36" fill="url(#bg)"/>
+  <rect x="46" y="46" width="1508" height="888" rx="34" fill="url(#panel)" stroke="rgba(255,255,255,0.12)"/>
+
+  <text x="90" y="122" class="title">Fluxo do link mensal</text>
+  <text x="90" y="160" class="subtitle">Como o cliente sai do link do vendedor e chega no PIX do plano mensal</text>
+
+  <rect x="92" y="216" width="96" height="34" rx="17" fill="url(#accent)"/>
+  <text x="118" y="239" class="chip">ETAPA 1</text>
+  <rect x="92" y="268" width="650" height="120" rx="28" fill="url(#box)" filter="url(#shadow)"/>
+  <text x="126" y="316" class="step-title">Vendedor copia o link mensal do pacote</text>
+  <text x="126" y="350" class="step-body">Ele escolhe o link do Basico, Medio ou Maximo</text>
+
+  <rect x="858" y="216" width="96" height="34" rx="17" fill="url(#accent)"/>
+  <text x="884" y="239" class="chip">ETAPA 2</text>
+  <rect x="858" y="268" width="650" height="120" rx="28" fill="url(#box)" filter="url(#shadow)"/>
+  <text x="892" y="316" class="step-title">O link ja sai com duas informacoes</text>
+  <text x="892" y="350" class="step-body">Codigo do vendedor + plano mensal escolhido</text>
+  <text x="892" y="378" class="step-body">Ex.: /convite/CODIGO?plan=starter_monthly</text>
+
+  <path d="M742 328H838" stroke="#CDBAFF" stroke-width="6" stroke-linecap="round"/>
+  <path d="M824 314L852 328L824 342" fill="none" stroke="#CDBAFF" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <rect x="92" y="448" width="96" height="34" rx="17" fill="url(#accent)"/>
+  <text x="118" y="471" class="chip">ETAPA 3</text>
+  <rect x="92" y="500" width="650" height="150" rx="28" fill="url(#box)" filter="url(#shadow)"/>
+  <text x="126" y="548" class="step-title">Cliente abre o link e vai para o cadastro</text>
+  <text x="126" y="582" class="step-body">O sistema guarda o affiliate_code do vendedor</text>
+  <text x="126" y="610" class="step-body">e guarda tambem qual plano mensal ele deve comprar</text>
+
+  <rect x="858" y="448" width="96" height="34" rx="17" fill="url(#accent)"/>
+  <text x="884" y="471" class="chip">ETAPA 4</text>
+  <rect x="858" y="500" width="650" height="150" rx="28" fill="url(#box)" filter="url(#shadow)"/>
+  <text x="892" y="548" class="step-title">Cliente conclui o cadastro e faz login</text>
+  <text x="892" y="582" class="step-body">Depois do login, o sistema detecta o plano salvo</text>
+  <text x="892" y="610" class="step-body">e redireciona automatico para a tela de planos</text>
+
+  <path d="M742 575H838" stroke="#CDBAFF" stroke-width="6" stroke-linecap="round"/>
+  <path d="M824 561L852 575L824 589" fill="none" stroke="#CDBAFF" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <path d="M417 388V478" stroke="#CDBAFF" stroke-width="6" stroke-linecap="round"/>
+  <path d="M403 464L417 492L431 464" fill="none" stroke="#CDBAFF" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M1183 388V478" stroke="#CDBAFF" stroke-width="6" stroke-linecap="round"/>
+  <path d="M1169 464L1183 492L1197 464" fill="none" stroke="#CDBAFF" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <rect x="365" y="710" width="96" height="34" rx="17" fill="url(#accent)"/>
+  <text x="391" y="733" class="chip">ETAPA 5</text>
+  <rect x="245" y="762" width="1110" height="132" rx="34" fill="#1D1035" stroke="#FFD970" stroke-width="3"/>
+  <text x="284" y="812" class="step-title">PIX abre automatico com o valor certo do plano mensal</text>
+  <text x="284" y="846" class="step-body">Pagamento aprovado = plano mensal ativado para 4 ciclos semanais</text>
+  <text x="284" y="874" class="footer">Resumo: link do vendedor - cadastro - login - redirect automatico - PIX automatico - plano mensal ativo</text>
+</svg>

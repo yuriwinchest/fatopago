@@ -120,3 +120,52 @@ dist
 temp_app/
 .vercel
 .env*.local
+
+# SSH Keys and Certificates (SECURITY)
+*.key
+*.pem
+*.p12
+*.pfx
+*.crt
+*.cer
+.ssh/
+certs/
+
+# Deploy artifacts
+app.tar
+*.tar
+*.tar.gz
+
+# VPS and deployment configs with credentials
+deploy_vps.sh
+.env.production
+.env.local
+.env.*.local
+
+# Backup files that may contain sensitive data
+backup_legacy/
+*.bak
+*.backup
+
+# Root-level diagnostic/maintenance scripts (may contain credentials)
+/*.cjs
+!/.eslintrc.cjs
+
+# Temporary scripts
+tmp/
+
+# Midia local (nao pertence ao repo - usar cloud storage)
+vidoes/
+*.mp4
+*.mov
+
+# node_modules lock interno
+node_modules/.package-lock.json
+
+# Dumps locais com segredos - NUNCA commitar
+*.tar
+*.tgz
+app.tar
+
+# Claude Code internal worktrees (gerados pela tool)
+.claude/worktrees/

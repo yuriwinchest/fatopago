@@ -1,129 +1,162 @@
-import { ArrowRight, CheckCircle, ShieldCheck, Zap, Trophy } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import {
+    ArrowRight,
+    CheckCircle,
+    Clock,
+    HelpCircle,
+    Newspaper,
+    Package,
+    PlusCircle,
+    RefreshCw
+} from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 
 const HowItWorks = () => {
+    const navigate = useNavigate();
+
+    const summaryItems = [
+        { icon: <RefreshCw className="h-5 w-5 text-purple-400" />, text: 'Ciclo semanal: domingo 12h até domingo 11h' },
+        { icon: <Package className="h-5 w-5 text-blue-400" />, text: 'Cada pacote libera um total fixo de notícias' },
+        { icon: <Newspaper className="h-5 w-5 text-green-400" />, text: 'Cada notícia validada consome 1 unidade do pacote' },
+        { icon: <PlusCircle className="h-5 w-5 text-pink-400" />, text: 'Você pode comprar outro pacote quando as notícias acabarem' },
+        { icon: <RefreshCw className="h-5 w-5 text-amber-400" />, text: 'Entre 11h e 12h existe a janela de reinício do ciclo' }
+    ];
+
     return (
-        <div className="min-h-screen bg-brand-dark text-white font-sans">
-            {/* Header */}
-            <header className="fixed w-full z-50 bg-[#2e0259] rounded-b-[40px] shadow-2xl p-6 lg:px-16 flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
-                        <span className="font-bold text-primary">✓</span>
+        <div className="min-h-screen bg-[#0F0529] font-sans text-white selection:bg-purple-500/30">
+            <header className="sticky top-0 z-40 border-b border-white/10 bg-[#1b0837]/85 backdrop-blur-md">
+                <div className="mx-auto flex w-full max-w-[1200px] items-center justify-between px-6 py-4 lg:px-10">
+                    <button className="flex items-center gap-3" onClick={() => navigate('/')} aria-label="Ir para início">
+                        <img src="/logo.png" alt="FatoPago" className="h-8 w-auto" />
+                    </button>
+
+                    <nav className="hidden items-center gap-8 text-sm font-bold text-slate-300 md:flex">
+                        <Link to="/" className="transition-colors hover:text-white">Início</Link>
+                        <Link to="/how-it-works" className="text-purple-300">Como funciona</Link>
+                        <Link to="/noticias-falsas" className="transition-colors hover:text-white">Notícias falsas</Link>
+                    </nav>
+
+                    <div className="flex items-center gap-3">
+                        <Link to="/login" className="hidden text-sm font-bold text-slate-300 transition-colors hover:text-white sm:inline-flex">
+                            Login
+                        </Link>
+                        <Link
+                            to="/register"
+                            className="rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 px-5 py-2.5 text-sm font-bold text-white transition-all hover:from-purple-500 hover:to-indigo-500"
+                        >
+                            Começar
+                        </Link>
                     </div>
-                    <span className="font-bold text-xl tracking-tight">FatoPago</span>
                 </div>
-                <nav className="hidden md:flex gap-8 text-sm font-semibold text-slate-300">
-                    <Link to="/" className="hover:text-white transition-colors">Início</Link>
-                    <Link to="/how-it-works" className="text-white">Como Funciona</Link>
-                    <Link to="/login" className="hover:text-white transition-colors">Login</Link>
-                </nav>
-                <Link to="/" className="bg-primary hover:bg-purple-600 text-white px-6 py-2 rounded-lg font-bold text-sm transition-all shadow-lg hover:shadow-primary/20">
-                    Começar Agora
-                </Link>
             </header>
 
-            {/* Hero Section */}
-            <section className="pt-32 pb-20 px-6 lg:px-16 text-center max-w-4xl mx-auto">
-                <h1 className="text-4xl lg:text-6xl font-extrabold mb-6 leading-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-purple-200">
-                    Como Funciona o Sistema de Ciclos
-                </h1>
-                <p className="text-lg text-slate-400 mb-12 max-w-2xl mx-auto">
-                    Entenda como transformar sua análise crítica em rendimentos reais através do nosso inovador sistema de validação por ciclos.
-                </p>
-
-                <div className="grid md:grid-cols-3 gap-8 text-left">
-                    <div className="bg-[#1A1040] p-6 rounded-2xl border border-white/5 relative group hover:border-primary/50 transition-all">
-                        <div className="w-12 h-12 bg-primary/20 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                            <Zap className="w-6 h-6 text-primary" />
-                        </div>
-                        <h3 className="text-xl font-bold mb-2">1. Adquira um Ciclo</h3>
-                        <p className="text-slate-400 text-sm">Ao invés de mensalidades, você compra um pacote de validações (Ciclo). Você tem total controle sobre seu ritmo.</p>
+            <main className="mx-auto w-full max-w-[1200px] space-y-20 px-6 py-14 lg:px-10">
+                <section className="text-center">
+                    <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-purple-500/20 bg-purple-500/10 px-4 py-2">
+                        <HelpCircle className="h-4 w-4 text-purple-300" />
+                        <span className="text-xs font-bold uppercase tracking-widest text-purple-200">Guia completo</span>
                     </div>
+                    <h1 className="mx-auto max-w-4xl text-4xl font-black leading-tight md:text-6xl">
+                        O que é o <span className="bg-gradient-to-r from-purple-300 to-pink-400 bg-clip-text text-transparent">Ciclo</span> no FatoPago?
+                    </h1>
+                    <p className="mx-auto mt-6 max-w-3xl text-lg leading-relaxed text-slate-400">
+                        Ciclo é o período em que seu pacote fica ativo para validação de notícias. Veja como funciona, da liberação das notícias até a renovação automática.
+                    </p>
+                </section>
 
-                    <div className="bg-[#1A1040] p-6 rounded-2xl border border-white/5 relative group hover:border-primary/50 transition-all">
-                        <div className="w-12 h-12 bg-green-500/20 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                            <CheckCircle className="w-6 h-6 text-green-400" />
-                        </div>
-                        <h3 className="text-xl font-bold mb-2">2. Valide Notícias</h3>
-                        <p className="text-slate-400 text-sm">Analise as notícias apresentadas. Quanto maior sua precisão, maior sua reputação e seus ganhos.</p>
-                    </div>
-
-                    <div className="bg-[#1A1040] p-6 rounded-2xl border border-white/5 relative group hover:border-primary/50 transition-all">
-                        <div className="w-12 h-12 bg-purple-500/20 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                            <Trophy className="w-6 h-6 text-purple-400" />
-                        </div>
-                        <h3 className="text-xl font-bold mb-2">3. Receba Recompensas</h3>
-                        <p className="text-slate-400 text-sm">Acumule saldo a cada validação correta. Saques via PIX instantâneo ao atingir R$ 50,00.</p>
-                    </div>
-                </div>
-            </section>
-
-            {/* Ranking & Safety */}
-            <section className="py-20 bg-[#0F0826]">
-                <div className="px-6 lg:px-16 max-w-6xl mx-auto flex flex-col lg:flex-row items-center gap-16">
-                    <div className="lg:w-1/2">
-                        <div className="bg-gradient-to-br from-[#8a2ce2] to-[#4B0082] p-8 rounded-3xl relative overflow-hidden shadow-2xl">
-                            <div className="relative z-10">
-                                <h3 className="text-2xl font-bold mb-1">Ranking de Elite</h3>
-                                <p className="text-purple-200 mb-6 text-sm">Dispute posições com validadores do seu estado.</p>
-
-                                <div className="space-y-3">
-                                    <div className="bg-white/10 p-3 rounded-xl flex items-center justify-between backdrop-blur-sm">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-8 h-8 rounded-full bg-yellow-400/20 text-yellow-200 flex items-center justify-center font-bold">1</div>
-                                            <div className="font-bold text-sm">São Paulo - SP</div>
-                                        </div>
-                                        <div className="text-xs font-bold text-white bg-white/20 px-2 py-1 rounded">R$ 4.2k pagos</div>
-                                    </div>
-                                    <div className="bg-white/10 p-3 rounded-xl flex items-center justify-between backdrop-blur-sm opacity-80">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-8 h-8 rounded-full bg-slate-400/20 text-slate-200 flex items-center justify-center font-bold">2</div>
-                                            <div className="font-bold text-sm">Rio de Janeiro - RJ</div>
-                                        </div>
-                                        <div className="text-xs font-bold text-white bg-white/20 px-2 py-1 rounded">R$ 3.1k pagos</div>
-                                    </div>
-                                </div>
+                <section>
+                    <div className="rounded-[32px] border border-white/10 bg-[#1A1040]/40 p-6 md:p-8">
+                        <div className="flex flex-col items-start gap-6 md:flex-row md:items-center">
+                            <div className="flex h-20 w-20 items-center justify-center rounded-3xl border border-purple-500/30 bg-purple-600/20">
+                                <Clock className="h-10 w-10 text-purple-300" />
                             </div>
-
-                            {/* Decorative */}
-                            <div className="absolute top-0 right-0 -mr-10 -mt-10 w-40 h-40 bg-white/10 rounded-full blur-2xl" />
+                            <div>
+                                <h2 className="text-2xl font-black text-white md:text-3xl">Duração do ciclo: semanal</h2>
+                                <p className="mt-2 text-base leading-relaxed text-slate-300">
+                                    O ciclo começa todo domingo ao meio-dia e encerra no domingo seguinte, às 11h da manhã. Depois disso, a plataforma reinicia a janela semanal e prepara o próximo ranking.
+                                </p>
+                            </div>
                         </div>
                     </div>
+                </section>
 
-                    <div className="lg:w-1/2 space-y-8">
-                        <div>
-                            <div className="flex items-center gap-3 mb-4">
-                                <ShieldCheck className="w-8 h-8 text-green-400" />
-                                <h2 className="text-3xl font-bold">Segurança e Transparência</h2>
-                            </div>
-                            <p className="text-slate-400 leading-relaxed">
-                                Nosso algoritmo de consenso garante que apenas validações precisas sejam remuneradas. Isso protege o ecossistema contra fraudes e valoriza os validadores sérios.
+                <section className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                    <article className="rounded-[28px] border border-white/10 bg-[#1A1040]/30 p-7">
+                        <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-500/10">
+                            <PlusCircle className="h-6 w-6 text-blue-400" />
+                        </div>
+                        <h3 className="mb-3 text-xl font-bold text-white">Compra de pacotes no ciclo</h3>
+                        <p className="mb-4 text-sm leading-relaxed text-slate-400">
+                            Você pode comprar outro pacote no mesmo ciclo, mas apenas quando finalizar o pacote atual.
+                        </p>
+                        <div className="rounded-2xl border border-blue-500/20 bg-blue-500/5 p-4">
+                            <p className="flex items-center gap-2 text-sm font-bold text-blue-300">
+                                <ArrowRight className="h-4 w-4" />
+                                Regra: 1 pacote ativo por vez. Ao terminar, você libera a compra do próximo.
                             </p>
                         </div>
+                    </article>
 
-                        <div className="grid grid-cols-2 gap-6">
-                            <div>
-                                <h4 className="font-bold text-white mb-2">Saque PIX</h4>
-                                <p className="text-sm text-slate-500">Receba seus ganhos em segundos, diretamente na sua conta bancária.</p>
-                            </div>
-                            <div>
-                                <h4 className="font-bold text-white mb-2">Sem Mensalidades</h4>
-                                <p className="text-sm text-slate-500">Pague apenas pelo ciclo de trabalho que desejar realizar.</p>
-                            </div>
+                    <article className="rounded-[28px] border border-white/10 bg-[#1A1040]/30 p-7">
+                        <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-green-500/10">
+                            <Package className="h-6 w-6 text-green-400" />
                         </div>
+                        <h3 className="mb-4 text-xl font-bold text-white">Como o pacote funciona</h3>
+                        <ul className="space-y-3 text-sm text-slate-400">
+                            <li className="flex gap-3">
+                                <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-green-500" />
+                                <span>Cada pacote libera um total fixo de notícias para validar.</span>
+                            </li>
+                            <li className="flex gap-3">
+                                <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-green-500" />
+                                <span>Cada notícia validada consome 1 unidade do pacote.</span>
+                            </li>
+                            <li className="flex gap-3">
+                                <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-green-500" />
+                                <span>A contagem é debitada automaticamente a cada validação.</span>
+                            </li>
+                            <li className="flex gap-3">
+                                <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-green-500" />
+                                <span>Você valida enquanto houver notícias disponíveis e ciclo ativo.</span>
+                            </li>
+                        </ul>
+                    </article>
+                </section>
 
-                        <div className="pt-4">
-                            <Link to="/" className="inline-flex items-center gap-2 text-primary font-bold hover:gap-3 transition-all">
-                                Quero me tornar um validador <ArrowRight className="w-4 h-4" />
-                            </Link>
+                <section>
+                    <div className="rounded-[32px] border border-purple-500/30 bg-gradient-to-br from-[#2E0259] to-[#0F0529] p-8 text-center md:p-12">
+                        <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-purple-500/30 bg-purple-600/20">
+                            <RefreshCw className="h-8 w-8 text-purple-300" />
                         </div>
+                        <h2 className="text-2xl font-black md:text-4xl">Pacotes no próximo ciclo</h2>
+                        <p className="mx-auto mt-4 max-w-2xl text-slate-300">
+                            Se as notícias do pacote acabarem, você pode comprar outro pacote dentro da validade liberada para o seu perfil.
+                        </p>
                     </div>
-                </div>
-            </section>
+                </section>
 
-            {/* Footer */}
-            <footer className="py-12 border-t border-white/5 text-center text-slate-600 text-sm">
-                <p>&copy; 2024 FatoPago. Todos os direitos reservados.</p>
+                <section className="mx-auto max-w-3xl">
+                    <h3 className="mb-8 text-center text-3xl font-black">Resumo rápido</h3>
+                    <div className="space-y-3">
+                        {summaryItems.map((item, idx) => (
+                            <div key={idx} className="flex items-center gap-4 rounded-2xl border border-white/10 bg-[#1A1040]/25 p-4">
+                                {item.icon}
+                                <span className="text-sm font-bold text-slate-200">{item.text}</span>
+                            </div>
+                        ))}
+                    </div>
+                    <div className="mt-12 text-center">
+                        <Link
+                            to="/register"
+                            className="inline-flex items-center gap-3 rounded-2xl bg-white px-9 py-4 text-lg font-black text-[#0F0529] transition-all hover:scale-[1.02]"
+                        >
+                            COMEÇAR AGORA <ArrowRight className="h-6 w-6" />
+                        </Link>
+                    </div>
+                </section>
+            </main>
+
+            <footer className="border-t border-white/5 py-10 text-center text-sm text-slate-600">
+                <p>&copy; 2026 FatoPago. Todos os direitos reservados.</p>
             </footer>
         </div>
     );
