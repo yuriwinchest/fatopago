@@ -126,3 +126,115 @@ Arquivos alterados nesta rodada:
 3. `supabase/functions/delete-account/index.ts`
 4. `src/hooks/useAdminData.ts`
 5. `src/pages/Profile.tsx`
+
+## 2026-04-01: rollback de cascade no ledger + encerramento de conta por RPC
+
+| Ponto | Como estava | O que foi implementado | Resultado |
+|---|---|---|---|
+| FK do `financial_ledger` | `ON DELETE CASCADE` para `auth.users` | Recriada com `ON DELETE RESTRICT` | Banco passa a impedir exclusão física de usuário com movimentação financeira |
+| Encerramento de conta | Fluxos mistos com risco de hard delete | Nova RPC `close_user_account(target_user_id)` (soft delete + anonimização + bloqueio de login) | Privacidade LGPD sem perda do livro-razão |
+| Fluxo self-service | Dependia de caminhos antigos (`delete_own_account`/edge) | `delete_own_account()` agora delega para `close_user_account(auth.uid())` | Caminho único e auditável |
+| Frontend de perfil | Botão podia depender de edge function | Botão passa a chamar RPC `close_user_account` diretamente | Menos superfície e menor acoplamento |
+| Admin delete user | Tinha limpeza física em cenários sem histórico | Admin passa a encerrar conta via `close_user_account` | Sem destruição de histórico financeiro |
+
+Arquivos alterados nesta rodada:
+1. `supabase/migrations/20260401000000_rollback_ledger_cascade_delete.sql`
+2. `supabase/functions/admin-delete-user/index.ts`
+3. `supabase/functions/delete-account/index.ts`
+4. `src/pages/Profile.tsx`
+5. `supabase/migrations/20260401001000_align_financial_ledger_actor_fk_restrict.sql`
+
+## 2026-04-01: ledger append-only para transicoes de status em transacoes
+
+| Ponto | Como estava | O que foi implementado | Resultado |
+|---|---|---|---|
+| Trilha de status no ledger | Trigger capturava apenas `INSERT` em `transactions`; atualizacoes de `status` ficavam sem evento imutavel | Novo trigger `trg_capture_transaction_status_to_ledger` (AFTER UPDATE) inserindo eventos `source_table='transactions_status'` com `amount=0` | Mudancas de `pending -> completed/failed` passam a ter trilha append-only sem reescrever historico |
+| Transacoes legadas sem linha base | Podia existir transacao antiga sem entrada base no ledger | Backfill idempotente para criar linha `source_table='transactions'` ausente | Cobertura historica do ledger fica completa para reconciliacao |
+| Drift historico de status | `transactions.status` podia divergir de `financial_ledger.transaction_status` da linha base | Backfill de evento de status (`transactions_status`) quando houver divergencia historica | Auditoria passa a refletir o estado efetivo da transacao ao longo do tempo |
+
+Arquivo alterado nesta rodada:
+1. `supabase/migrations/20260401102000_financial_ledger_transaction_status_events.sql`
+
+## 2026-04-01: hardening final de payout/webhook (runtime)
+
+| Ponto | Como estava | O que foi implementado | Resultado |
+|---|---|---|---|
+| Drift de retries no saque | Worker usava `WITHDRAWAL_WORKER_MAX_RETRIES`, mas RPC de claim tinha limite fixo `< 8` | Nova migration reescreve `claim_pending_pix_withdrawals(p_limit, p_max_retries)` e worker passa `p_max_retries` | Evita saques presos em `processing` por divergência de configuração |
+| Autenticação do worker | Aceitava token também por query string | Worker aceita apenas `Authorization: Bearer` ou `x-worker-token` | Reduz vazamento operacional de token em URL/logs |
+| Payload do worker | JSON não tinha contrato estrito | Worker aceita apenas campo opcional `limit` e rejeita extras com `400` | Menor superfície para abuso de payload |
+| Webhook sem fail-closed | Secret ausente caía para modo token-only por padrão | Modo estrito por padrão: sem secret retorna erro; token-only só com `MERCADOPAGO_WEBHOOK_ALLOW_INSECURE_TOKEN_ONLY=true` | Segurança forte por padrão e bypass explícito |
+| Robustez de chamadas externas no webhook | Fetch ao MP sem timeout explícito | Timeout configurável (`MERCADOPAGO_WEBHOOK_TIMEOUT_MS`) nas consultas externas | Reduz risco de stuck request e degradação sob instabilidade |
+| Higiene de `resourceId` no webhook | Aceitava texto sanitizado sem whitelist de formato | Validação de formato seguro + bloqueio de payment lookup com id inválido | Menor superfície para input malicioso em rota de webhook |
+
+Arquivos alterados nesta rodada:
+1. `supabase/functions/process-pending-withdrawals/index.ts`
+2. `supabase/functions/mercadopago-webhook/index.ts`
+3. `supabase/migrations/20260401113000_align_withdrawal_retry_source_of_truth.sql`
+
+## 2026-04-01: retenção automática de receipts de webhook
+
+| Ponto | Como estava | O que foi implementado | Resultado |
+|---|---|---|---|
+| Crescimento da tabela de receipts | `mercadopago_webhook_receipts` sem limpeza automática | Nova função `purge_mercadopago_webhook_receipts(retention_days, batch_limit)` com deleção em lote e cutoff temporal | Tabela deixa de crescer indefinidamente e mantém janela auditável recente |
+| Execução periódica da limpeza | Sem agendamento dedicado | Job `cleanup-mercadopago-webhook-receipts` no `pg_cron` (diário às 03:17) | Retenção contínua sem intervenção manual |
+| Segurança operacional da rotina | Limpeza poderia ser chamada sem controle explícito | Função `SECURITY DEFINER` com gate para `service_role/admin/postgres` + `REVOKE` público | Evita execução indevida da rotina de housekeeping |
+
+Arquivo alterado nesta rodada:
+1. `supabase/migrations/20260401121500_webhook_receipts_retention_job.sql`
+
+## 2026-04-01: ajuste de retenção de receipts para 30 dias
+
+| Ponto | Como estava | O que foi implementado | Resultado |
+|---|---|---|---|
+| Janela de retenção | 45 dias por default e no job agendado | Default da função atualizado para 30 dias e job diário ajustado para `purge_mercadopago_webhook_receipts(30, 10000)` | Reduz volume retido mantendo trilha recente suficiente |
+
+Arquivo alterado nesta rodada:
+1. `supabase/migrations/20260401123000_adjust_webhook_receipts_retention_to_30_days.sql`
+
+## 2026-04-01: alinhamento de horário do cleanup para operação Brasil
+
+| Ponto | Como estava | O que foi implementado | Resultado |
+|---|---|---|---|
+| Agendamento diário do cleanup | `03:17` em UTC (equivalente a `00:17` BRT) | Reagendado para `06:17` UTC | Execução passa a ocorrer em `03:17` BRT (America/Sao_Paulo) |
+
+Arquivo alterado nesta rodada:
+1. `supabase/migrations/20260401124500_align_webhook_cleanup_schedule_brt.sql`
+
+## 2026-04-01: observabilidade defensiva no admin + tratamento de erros no frontend
+
+| Ponto | Como estava | O que foi implementado | Resultado |
+|---|---|---|---|
+| Visibilidade de ataques/anomalias | Backend bloqueava eventos críticos, mas o admin não tinha painel dedicado para enxergar o que ocorreu | Nova tabela `security_alerts` + RPC idempotente `raise_security_alert(...)` + listagem/reconhecimento via admin | Eventos críticos passam a aparecer no painel admin com contagem, severidade e reincidência |
+| Webhook Mercado Pago | `401/403/409/500` eram apenas logados no runtime da função | Webhook agora abre alertas agregados para token inválido, assinatura inválida, `resource_id` suspeito, divergência de identidade/valor e falhas de reconciliação | Ataques ou inconsistências deixam rastro operacional visível no admin |
+| Worker de saques | Dead-letter, falha de claim, chave PIX inválida e lote anômalo não apareciam na UI administrativa | Worker agora registra alertas para retry estourado, falhas internas, acesso não autorizado e lotes com falha elevada | Admin passa a enxergar degradação operacional e possíveis tentativas de abuso |
+| Quarentena de saque | `pending_manual_review` existia no backend, mas não gerava sinal operacional explícito | Solicitação de saque agora gera alerta quando cai em revisão manual | Time administrativo sabe imediatamente quando a esteira de segurança segurou um saque |
+| UX diante de erros rígidos | Frontend tratava respostas defensivas do backend como erro genérico | `pixPaymentService` agora lança `PixApiError` estruturado e a UI traduz `409/403/429/400` para mensagens corretas | Usuário entende conflito de PIX pendente, pacote ativo, sessão expirada e revisão manual sem tela opaca |
+| Monitoramento no painel | Não existia aba específica de observabilidade | Nova aba `Alertas` no admin, com destaque pulsante, polling e ação de reconhecer alerta | O operador consegue acompanhar incidentes sem depender de e-mail |
+
+Arquivos alterados nesta rodada:
+1. `supabase/migrations/20260401140000_admin_security_alerts_observability.sql`
+2. `supabase/functions/_shared/securityAlerts.ts`
+3. `supabase/functions/mercadopago-webhook/index.ts`
+4. `supabase/functions/process-pending-withdrawals/index.ts`
+5. `supabase/functions/mercadopago-pix-withdraw/index.ts`
+6. `src/hooks/useAdminData.ts`
+7. `src/components/admin/SecurityAlertsPanel.tsx`
+8. `src/pages/AdminDashboard.tsx`
+9. `src/lib/pixPaymentService.ts`
+10. `src/components/PixPaymentModal.tsx`
+11. `src/components/WithdrawalModal.tsx`
+12. `src/lib/__tests__/pixPaymentService.test.ts`
+
+## 2026-04-01: orquestração operacional do consenso anti-Sybil
+
+| Ponto | Como estava | O que foi implementado | Resultado |
+|---|---|---|---|
+| Gatilho de liquidação de notícias | `settle_open_news_tasks(...)` existia, mas não rodava sozinho | Novo wrapper `run_open_news_task_settlement_job(limit, min_votes)` + agendamento `pg_cron` a cada 10 minutos (`news-task-settlement-worker`) | O consenso ponderado passa a ser avaliado automaticamente sem depender de execução manual |
+| Fila de revisão manual | `manual_review` existia como estado lógico, mas sem trilha própria para moderação | Nova tabela `news_task_manual_review_votes` + snapshot imutável de votos, custo e reputação no momento do travamento | O admin passa a julgar em cima de evidência congelada, não de reputação mutável |
+| Snapshot de casos inconclusivos | A tarefa travava, mas o backend não preservava a foto do estado que levou ao impasse | Nova função `capture_news_task_manual_review_snapshot(task_id, min_reputation)` acionada ao entrar em `manual_review` | Empates, quórum insuficiente e threshold baixo deixam trilha operacional auditável |
+| Resolução administrativa | Não existia RPC para o admin “bater o martelo” em tarefa travada | Nova RPC `admin_force_settle_news_task(task_id, correct_verdict, resolution_note)` | O admin consegue definir o lado vencedor e liberar a liquidação usando o snapshot congelado |
+| Consulta de fila travada | Não existia listagem própria de tarefas pendentes de moderação | Nova RPC `admin_list_news_tasks_manual_review(limit)` + RPC de detalhe `admin_get_news_task_manual_review_votes(task_id)` | O backend agora expõe a fila e os votos da revisão manual para consumo seguro do painel |
+| Observabilidade do settlement | Falha do job ou crescimento de `manual_review` não gerava alerta operacional | `run_open_news_task_settlement_job(...)` agora abre/atualiza alertas em `security_alerts` quando encontra casos em revisão ou falha de execução | O admin é avisado quando o motor de consenso sai da esteira automática |
+
+Arquivos alterados nesta rodada:
+1. `supabase/migrations/20260401184500_schedule_and_admin_manual_review_news_tasks.sql`

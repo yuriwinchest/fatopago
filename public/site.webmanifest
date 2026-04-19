@@ -1,6 +1,8 @@
 {
     "name": "FatoPago",
     "short_name": "FatoPago",
+    "start_url": "/",
+    "scope": "/",
     "icons": [
         {
             "src": "/android-chrome-192x192.png?v=3",
@@ -15,5 +17,6 @@
     ],
     "theme_color": "#12005E",
     "background_color": "#0F0529",
-    "display": "standalone"
+    "display": "standalone",
+    "orientation": "portrait"
 }

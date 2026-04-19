@@ -46,10 +46,11 @@ LIMIT 5;
 
 ```bash
 # Conectar na VPS
-ssh root@72.60.53.191
+ssh root@SEU_IP_OU_HOST
 
-# Executar psql (substituir senha)
-PGPASSWORD='Horapiaui@2026' psql \
+# Executar psql (NÃO cole senha em documentação/repo)
+# Use variável de ambiente ou digite interativamente se preferir.
+PGPASSWORD="$SUPABASE_DB_PASSWORD" psql \
   -h aws-0-sa-east-1.pooler.supabase.com \
   -U postgres.raxjzfvunjxqbxswuipp \
   -d postgres \

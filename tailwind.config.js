@@ -60,7 +60,9 @@ export default {
         sm: "calc(var(--radius) - 4px)",
       },
       fontFamily: {
-        sans: ["Inter", "sans-serif"],
+        sans: ["'Plus Jakarta Sans'", "Inter", "sans-serif"],
+        display: ["'Montserrat'", "sans-serif"],
+        tech: ["'Space Grotesk'", "sans-serif"],
       },
     },
   },

@@ -1,0 +1,90 @@
+<svg width="1600" height="980" viewBox="0 0 1600 980" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg2" x1="120" y1="50" x2="1480" y2="930" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#170A34"/>
+      <stop offset="1" stop-color="#05020E"/>
+    </linearGradient>
+    <linearGradient id="cardBlue" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#2A5BFF"/>
+      <stop offset="1" stop-color="#1A2D74"/>
+    </linearGradient>
+    <linearGradient id="cardPink" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#F059C0"/>
+      <stop offset="1" stop-color="#7A1E79"/>
+    </linearGradient>
+    <linearGradient id="cardGold" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#FFCB4A"/>
+      <stop offset="1" stop-color="#8A4C12"/>
+    </linearGradient>
+    <linearGradient id="cycleCard" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#6F3EFF"/>
+      <stop offset="1" stop-color="#2C145E"/>
+    </linearGradient>
+    <style>
+      .title { font: 800 46px 'Segoe UI', Arial, sans-serif; fill: #FFFFFF; }
+      .subtitle { font: 500 22px 'Segoe UI', Arial, sans-serif; fill: #D7D0F2; }
+      .cardTitle { font: 800 28px 'Segoe UI', Arial, sans-serif; fill: #FFFFFF; }
+      .cardBody { font: 600 20px 'Segoe UI', Arial, sans-serif; fill: #F5F2FF; }
+      .cardValue { font: 900 40px 'Segoe UI', Arial, sans-serif; fill: #FFFFFF; }
+      .cycleTitle { font: 800 23px 'Segoe UI', Arial, sans-serif; fill: #FFFFFF; }
+      .cycleBody { font: 500 18px 'Segoe UI', Arial, sans-serif; fill: #F0EAFF; }
+      .note { font: 700 20px 'Segoe UI', Arial, sans-serif; fill: #FFE07A; }
+      .small { font: 500 17px 'Segoe UI', Arial, sans-serif; fill: #E8DFFF; }
+    </style>
+  </defs>
+
+  <rect width="1600" height="980" rx="36" fill="url(#bg2)"/>
+
+  <text x="88" y="116" class="title">Ciclos e valores do plano mensal</text>
+  <text x="88" y="154" class="subtitle">Por que o mensal ficou em R$ 24,00, R$ 40,00 e R$ 80,00</text>
+
+  <rect x="88" y="228" width="440" height="240" rx="34" fill="url(#cardBlue)"/>
+  <text x="122" y="284" class="cardTitle">Pacote Basico mensal</text>
+  <text x="122" y="328" class="cardBody">Plano semanal: R$ 6,00</text>
+  <text x="122" y="364" class="cardBody">4 ciclos no mes: 6 x 4</text>
+  <text x="122" y="422" class="cardValue">R$ 24,00</text>
+
+  <rect x="580" y="228" width="440" height="240" rx="34" fill="url(#cardPink)"/>
+  <text x="614" y="284" class="cardTitle">Pacote Medio mensal</text>
+  <text x="614" y="328" class="cardBody">Plano semanal: R$ 10,00</text>
+  <text x="614" y="364" class="cardBody">4 ciclos no mes: 10 x 4</text>
+  <text x="614" y="422" class="cardValue">R$ 40,00</text>
+
+  <rect x="1072" y="228" width="440" height="240" rx="34" fill="url(#cardGold)"/>
+  <text x="1106" y="284" class="cardTitle">Pacote Maximo mensal</text>
+  <text x="1106" y="328" class="cardBody">Plano semanal: R$ 20,00</text>
+  <text x="1106" y="364" class="cardBody">4 ciclos no mes: 20 x 4</text>
+  <text x="1106" y="422" class="cardValue">R$ 80,00</text>
+
+  <text x="88" y="556" class="note">Regra implementada hoje: mensal = valor semanal x 4 ciclos</text>
+  <text x="88" y="590" class="small">Por isso o pacote de 10 ficou em R$ 40,00. So mudaria para R$ 48,00 se a regra comercial fosse outra.</text>
+
+  <rect x="88" y="650" width="300" height="180" rx="30" fill="url(#cycleCard)"/>
+  <text x="122" y="702" class="cycleTitle">Ciclo 1</text>
+  <text x="122" y="740" class="cycleBody">Domingo 12h</text>
+  <text x="122" y="770" class="cycleBody">ate domingo 11h</text>
+
+  <rect x="432" y="650" width="300" height="180" rx="30" fill="url(#cycleCard)"/>
+  <text x="466" y="702" class="cycleTitle">Ciclo 2</text>
+  <text x="466" y="740" class="cycleBody">Mesmo formato</text>
+  <text x="466" y="770" class="cycleBody">semana seguinte</text>
+
+  <rect x="776" y="650" width="300" height="180" rx="30" fill="url(#cycleCard)"/>
+  <text x="810" y="702" class="cycleTitle">Ciclo 3</text>
+  <text x="810" y="740" class="cycleBody">Mesmo formato</text>
+  <text x="810" y="770" class="cycleBody">semana seguinte</text>
+
+  <rect x="1120" y="650" width="300" height="180" rx="30" fill="url(#cycleCard)"/>
+  <text x="1154" y="702" class="cycleTitle">Ciclo 4</text>
+  <text x="1154" y="740" class="cycleBody">Mesmo formato</text>
+  <text x="1154" y="770" class="cycleBody">fecha o mensal</text>
+
+  <path d="M388 740H422" stroke="#D8CCFF" stroke-width="6" stroke-linecap="round"/>
+  <path d="M404 726L432 740L404 754" fill="none" stroke="#D8CCFF" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M732 740H766" stroke="#D8CCFF" stroke-width="6" stroke-linecap="round"/>
+  <path d="M748 726L776 740L748 754" fill="none" stroke="#D8CCFF" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M1076 740H1110" stroke="#D8CCFF" stroke-width="6" stroke-linecap="round"/>
+  <path d="M1092 726L1120 740L1092 754" fill="none" stroke="#D8CCFF" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <text x="88" y="900" class="note">Conclusao: o cliente compra 1 plano mensal, paga 1 PIX e recebe direito a 4 ciclos semanais consecutivos.</text>
+</svg>

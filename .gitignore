@@ -161,3 +161,8 @@ vidoes/
 
 # node_modules lock interno
 node_modules/.package-lock.json
+
+# Dumps locais com segredos - NUNCA commitar
+*.tar
+*.tgz
+app.tar
