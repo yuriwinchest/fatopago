@@ -1,4 +1,4 @@
-import { ArrowLeft, DollarSign, FileText, Shield, Zap, Crown } from 'lucide-react';
+import { ArrowLeft, Crown, DollarSign, FileText, Shield, Zap } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const EarningsPolicy = () => {
@@ -6,149 +6,158 @@ const EarningsPolicy = () => {
 
     const packages = [
         {
-            title: "Pacote Iniciante",
-            price: "R$ 5,00",
+            title: 'Pacote Iniciante',
+            price: 'R$ 6,00',
             newsCount: 10,
-            icon: <Shield className="w-6 h-6 text-blue-400" />,
-            borderColor: "border-blue-500/30",
-            headerBg: "bg-blue-500/10",
-            totalEarnings: "R$ 5,00",
+            icon: <Shield className="h-6 w-6 text-blue-400" />,
+            borderColor: 'border-blue-500/30',
+            headerBg: 'bg-blue-500/10',
+            totalEarnings: 'R$ 6,00',
             items: [
-                { category: "Política", count: 3, value: "R$ 0,60", total: "R$ 1,80" },
-                { category: "Esporte", count: 3, value: "R$ 0,40", total: "R$ 1,20" },
-                { category: "Entretenimento/Famosos", count: 2, value: "R$ 0,75", total: "R$ 1,50" },
-                { category: "Economia", count: 2, value: "R$ 0,25", total: "R$ 0,50" },
+                { category: 'Política', count: 2, value: 'R$ 0,60', total: 'R$ 1,20' },
+                { category: 'Esporte', count: 2, value: 'R$ 0,40', total: 'R$ 0,80' },
+                { category: 'Entretenimento/Famosos', count: 5, value: 'R$ 0,75', total: 'R$ 3,75' },
+                { category: 'Economia', count: 1, value: 'R$ 0,25', total: 'R$ 0,25' }
             ]
         },
         {
-            title: "Pacote Pro",
-            price: "R$ 10,00",
+            title: 'Pacote Pro',
+            price: 'R$ 10,00',
             newsCount: 20,
-            icon: <Zap className="w-6 h-6 text-purple-400" />,
-            borderColor: "border-purple-500/30",
-            headerBg: "bg-purple-500/10",
-            totalEarnings: "R$ 10,00",
+            icon: <Zap className="h-6 w-6 text-purple-400" />,
+            borderColor: 'border-purple-500/30',
+            headerBg: 'bg-purple-500/10',
+            totalEarnings: 'R$ 10,00',
             items: [
-                { category: "Política", count: 6, value: "R$ 0,60", total: "R$ 3,60" },
-                { category: "Esporte", count: 6, value: "R$ 0,40", total: "R$ 2,40" },
-                { category: "Entretenimento/Famosos", count: 4, value: "R$ 0,75", total: "R$ 3,00" },
-                { category: "Economia", count: 4, value: "R$ 0,25", total: "R$ 1,00" },
+                { category: 'Política', count: 6, value: 'R$ 0,60', total: 'R$ 3,60' },
+                { category: 'Esporte', count: 6, value: 'R$ 0,40', total: 'R$ 2,40' },
+                { category: 'Entretenimento/Famosos', count: 4, value: 'R$ 0,75', total: 'R$ 3,00' },
+                { category: 'Economia', count: 4, value: 'R$ 0,25', total: 'R$ 1,00' }
             ]
         },
         {
-            title: "Pacote Expert",
-            price: "R$ 20,00",
+            title: 'Pacote Expert',
+            price: 'R$ 20,00',
             newsCount: 40,
-            icon: <Crown className="w-6 h-6 text-amber-400" />,
-            borderColor: "border-amber-500/30",
-            headerBg: "bg-amber-500/10",
-            totalEarnings: "R$ 20,00",
+            icon: <Crown className="h-6 w-6 text-amber-400" />,
+            borderColor: 'border-amber-500/30',
+            headerBg: 'bg-amber-500/10',
+            totalEarnings: 'R$ 20,00',
             items: [
-                { category: "Política", count: 12, value: "R$ 0,60", total: "R$ 7,20" },
-                { category: "Esporte", count: 12, value: "R$ 0,40", total: "R$ 4,80" },
-                { category: "Entretenimento/Famosos", count: 8, value: "R$ 0,75", total: "R$ 6,00" },
-                { category: "Economia", count: 8, value: "R$ 0,25", total: "R$ 2,00" },
+                { category: 'Política', count: 12, value: 'R$ 0,60', total: 'R$ 7,20' },
+                { category: 'Esporte', count: 12, value: 'R$ 0,40', total: 'R$ 4,80' },
+                { category: 'Entretenimento/Famosos', count: 8, value: 'R$ 0,75', total: 'R$ 6,00' },
+                { category: 'Economia', count: 8, value: 'R$ 0,25', total: 'R$ 2,00' }
             ]
         }
     ];
 
     return (
-        <div className="min-h-screen bg-[#0F0529] text-white font-sans selection:bg-purple-500/30">
-            {/* Navbar Simplificada */}
-            <nav className="fixed top-0 left-0 right-0 z-50 bg-[#2e0259]/80 backdrop-blur-lg border-b border-white/10 px-6 py-4">
-                <div className="max-w-7xl mx-auto flex justify-between items-center">
-                    <div className="flex items-center gap-4 cursor-pointer" onClick={() => navigate('/')}>
-                        <ArrowLeft className="w-6 h-6 text-slate-300 hover:text-white transition-colors" />
-                        <span className="font-bold text-lg">Voltar</span>
-                    </div>
-                    <img src="/logo.png" alt="Fatopago" className="h-8 md:h-10" />
+        <div className="min-h-screen bg-[#0F0529] font-sans text-white selection:bg-purple-500/30">
+            <header className="sticky top-0 z-40 border-b border-white/10 bg-[#1b0837]/85 backdrop-blur-md">
+                <div className="mx-auto flex w-full max-w-[1200px] items-center justify-between px-6 py-4 lg:px-10">
+                    <button
+                        onClick={() => navigate('/')}
+                        className="flex items-center gap-3 text-slate-300 transition-colors hover:text-white"
+                    >
+                        <ArrowLeft className="h-5 w-5" />
+                        <span className="text-sm font-bold">Voltar</span>
+                    </button>
+                    <img src="/logo.png" alt="Fatopago" className="h-8 w-auto" />
                 </div>
-            </nav>
+            </header>
 
-            <main className="pt-32 pb-20 px-6 max-w-4xl mx-auto">
-                <div className="text-center mb-16">
-                    <div className="inline-flex items-center gap-2 bg-purple-500/10 border border-purple-500/20 px-4 py-2 rounded-full mb-6">
-                        <FileText className="w-4 h-4 text-purple-400" />
-                        <span className="text-xs font-bold text-purple-200 uppercase tracking-widest">Transparência</span>
+            <main className="mx-auto w-full max-w-[1200px] px-6 py-12 lg:px-10">
+                <section className="mb-14 text-center">
+                    <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-purple-500/20 bg-purple-500/10 px-4 py-2">
+                        <FileText className="h-4 w-4 text-purple-300" />
+                        <span className="text-xs font-bold uppercase tracking-widest text-purple-200">Transparência</span>
                     </div>
-                    <h1 className="text-3xl md:text-5xl font-black mb-6">Política de Ganhos</h1>
-                    <p className="text-slate-400 text-lg leading-relaxed max-w-2xl mx-auto">
-                        Entenda detalhadamente como funciona a remuneração por cada pacote e editoria de notícias.
+                    <h1 className="text-3xl font-black md:text-5xl">Política de ganhos</h1>
+                    <p className="mx-auto mt-5 max-w-3xl text-lg leading-relaxed text-slate-400">
+                        Entenda como cada pacote converte validações em retorno potencial por categoria.
                     </p>
-                </div>
+                </section>
 
-                <div className="space-y-12">
+                <section className="space-y-8">
                     {packages.map((pkg, idx) => (
-                        <div key={idx} className={`bg-[#1A1040]/40 border ${pkg.borderColor} rounded-[32px] overflow-hidden`}>
-                            <div className={`${pkg.headerBg} p-8 flex flex-col md:flex-row justify-between items-center gap-4 border-b border-white/5`}>
+                        <article
+                            key={idx}
+                            className={`overflow-hidden rounded-[28px] border ${pkg.borderColor} bg-[#1A1040]/40`}
+                        >
+                            <div className={`${pkg.headerBg} flex flex-col gap-4 border-b border-white/5 p-6 md:flex-row md:items-center md:justify-between md:p-8`}>
                                 <div className="flex items-center gap-4">
-                                    <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10">
+                                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/5">
                                         {pkg.icon}
                                     </div>
                                     <div>
-                                        <h3 className="text-xl font-bold text-white">{pkg.title}</h3>
-                                        <p className="text-sm text-slate-400 font-medium">{pkg.newsCount} Notícias • Valor: {pkg.price}</p>
+                                        <h2 className="text-xl font-bold text-white">{pkg.title}</h2>
+                                        <p className="text-sm font-medium text-slate-400">
+                                            {pkg.newsCount} notícias - valor do pacote: {pkg.price}
+                                        </p>
                                     </div>
                                 </div>
-                                <div className="text-right">
-                                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Retorno Total Estimado</p>
+                                <div className="md:text-right">
+                                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                                        Retorno total estimado
+                                    </p>
                                     <p className="text-2xl font-black text-white">{pkg.totalEarnings}</p>
                                 </div>
                             </div>
 
-                            <div className="p-0 md:p-8 overflow-x-auto">
-                                <table className="w-full text-left border-collapse">
+                            <div className="overflow-x-auto">
+                                <table className="w-full min-w-[680px] border-collapse text-left">
                                     <thead>
                                         <tr className="border-b border-white/5">
-                                            <th className="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Editoria</th>
-                                            <th className="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider text-center">Qtd.</th>
-                                            <th className="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Valor Unit.</th>
-                                            <th className="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Total</th>
+                                            <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">Editoria</th>
+                                            <th className="px-6 py-4 text-center text-xs font-bold uppercase tracking-wider text-slate-500">Qtd.</th>
+                                            <th className="px-6 py-4 text-right text-xs font-bold uppercase tracking-wider text-slate-500">Valor unit.</th>
+                                            <th className="px-6 py-4 text-right text-xs font-bold uppercase tracking-wider text-slate-500">Total</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-white/5">
                                         {pkg.items.map((item, i) => (
-                                            <tr key={i} className="hover:bg-white/[0.02] transition-colors">
-                                                <td className="py-4 px-6 text-sm font-medium text-slate-300">{item.category}</td>
-                                                <td className="py-4 px-6 text-sm font-bold text-white text-center">{item.count}</td>
-                                                <td className="py-4 px-6 text-sm font-medium text-slate-400 text-right">{item.value}</td>
-                                                <td className="py-4 px-6 text-sm font-bold text-green-400 text-right">{item.total}</td>
+                                            <tr key={i} className="transition-colors hover:bg-white/[0.02]">
+                                                <td className="px-6 py-4 text-sm font-medium text-slate-300">{item.category}</td>
+                                                <td className="px-6 py-4 text-center text-sm font-bold text-white">{item.count}</td>
+                                                <td className="px-6 py-4 text-right text-sm font-medium text-slate-400">{item.value}</td>
+                                                <td className="px-6 py-4 text-right text-sm font-bold text-green-400">{item.total}</td>
                                             </tr>
                                         ))}
                                     </tbody>
                                     <tfoot>
                                         <tr className="bg-white/[0.02]">
-                                            <td className="py-4 px-6 text-sm font-black text-white uppercase">Total</td>
-                                            <td className="py-4 px-6 text-sm font-black text-white text-center">{pkg.newsCount}</td>
-                                            <td className="py-4 px-6 text-sm font-medium text-slate-500 text-right">—</td>
-                                            <td className="py-4 px-6 text-base font-black text-green-400 text-right">{pkg.totalEarnings}</td>
+                                            <td className="px-6 py-4 text-sm font-black uppercase text-white">Total</td>
+                                            <td className="px-6 py-4 text-center text-sm font-black text-white">{pkg.newsCount}</td>
+                                            <td className="px-6 py-4 text-right text-sm text-slate-500">-</td>
+                                            <td className="px-6 py-4 text-right text-base font-black text-green-400">{pkg.totalEarnings}</td>
                                         </tr>
                                     </tfoot>
                                 </table>
                             </div>
-                        </div>
+                        </article>
                     ))}
-                </div>
+                </section>
 
-                <div className="mt-16 p-8 bg-blue-500/10 border border-blue-500/20 rounded-3xl">
+                <section className="mt-12 rounded-3xl border border-blue-500/20 bg-blue-500/10 p-8">
                     <div className="flex gap-4">
-                        <DollarSign className="w-6 h-6 text-blue-400 flex-shrink-0" />
+                        <DollarSign className="h-6 w-6 shrink-0 text-blue-400" />
                         <div>
-                            <h4 className="text-lg font-bold text-white mb-2">Importante sobre os Ganhos</h4>
-                            <p className="text-slate-300 text-sm leading-relaxed mb-4">
-                                Os valores apresentados acima representam o potencial máximo de retorno de cada pacote ao completar todas as validações com sucesso.
+                            <h3 className="mb-2 text-lg font-bold text-white">Importante sobre os ganhos</h3>
+                            <p className="mb-4 text-sm leading-relaxed text-slate-300">
+                                Os valores acima representam o potencial máximo de retorno ao concluir todas as validações do pacote.
                             </p>
-                            <ul className="list-disc list-inside text-sm text-slate-400 space-y-1">
-                                <li>O pagamento é creditado em seu saldo imediatamente após a validação.</li>
-                                <li>Você pode sacar seus ganhos via PIX assim que atingir o valor mínimo de saque.</li>
-                                <li>Valores sujeitos a alterações conforme termos de uso vigentes.</li>
+                            <ul className="list-inside list-disc space-y-1 text-sm text-slate-400">
+                                <li>Pagamento creditado no saldo após a validação.</li>
+                                <li>Saque via PIX ao atingir valor mínimo.</li>
+                                <li>Valores podem mudar conforme termos de uso vigentes.</li>
                             </ul>
                         </div>
                     </div>
-                </div>
+                </section>
             </main>
 
-            <footer className="py-8 text-center text-slate-600 text-xs font-bold uppercase tracking-widest border-t border-white/5">
+            <footer className="border-t border-white/5 py-8 text-center text-xs font-bold uppercase tracking-widest text-slate-600">
                 © 2026 Fatopago. Todos os direitos reservados.
             </footer>
         </div>

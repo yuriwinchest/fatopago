@@ -1,5 +1,19 @@
 import { supabase } from './supabase';
-import { PlanId, PlanStatus, PLAN_LIMITS, PlanPurchaseSummary } from './planRules';
+import {
+    PlanId,
+    PLAN_CREDIT_EPSILON,
+    PlanStatus,
+    PLAN_LIMITS,
+    PlanPurchaseSummary,
+    PLANS_CONFIG,
+    getPlanRemainingCredit,
+    isPlanCreditExhausted
+} from './planRules';
+import {
+    WEEKLY_CYCLE_BREAK_MS,
+    getWeeklyCycleSnapshot
+} from './cycleSchedule';
+import { SellerCampaignSource } from './sellerCampaign';
 
 export interface PlanPurchase extends PlanPurchaseSummary {
     id: string;
@@ -7,10 +21,12 @@ export interface PlanPurchase extends PlanPurchaseSummary {
     created_at: string;
     updated_at?: string | null;
     last_validation_at?: string | null;
+    validation_credit_total?: number;
+    validation_credit_remaining?: number;
 }
 
 export type PlanAccessResult =
-    | { status: 'ok'; userId: string; plan: PlanPurchase }
+    | { status: 'ok'; userId: string; plan: PlanPurchase | null; creditSource: 'plan' | 'compensatory' }
     | { status: 'no-session' }
     | { status: 'no-plan' }
     | { status: 'exhausted' }
@@ -27,31 +43,47 @@ interface CycleState {
 }
 
 export const getCurrentCycleState = async (): Promise<CycleState> => {
-    const { data } = await supabase
-        .from('news_tasks')
-        .select('cycle_start_at')
-        .order('cycle_start_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-    if (!data?.cycle_start_at) {
-        return { state: 'no-cycle', canValidate: false };
-    }
-
     const now = new Date().getTime();
-    const cycleStart = new Date(data.cycle_start_at).getTime();
-    const cycleEnd = cycleStart + (24 * 60 * 60 * 1000); // +24h
-    const nextCycleStart = cycleEnd + (30 * 60 * 1000); // +30min
+    const fallback = getWeeklyCycleSnapshot(now);
 
-    if (now >= cycleStart && now < cycleEnd) {
-        return { state: 'active', canValidate: true, cycleStart, cycleEnd };
+    try {
+        const { data, error } = await supabase.rpc('get_validation_cycle_meta', { p_cycle_offset: 0 });
+        if (error) throw error;
+
+        const row = (Array.isArray(data) ? data[0] : data) as
+            | { cycle_start_at?: string | null; cycle_end_at?: string | null; is_active?: boolean | null }
+            | null;
+
+        const cycleStart = new Date(row?.cycle_start_at || fallback.cycleStartAt).getTime();
+        const cycleEnd = new Date(row?.cycle_end_at || fallback.cycleEndAt).getTime();
+        const nextCycleStart = cycleEnd + WEEKLY_CYCLE_BREAK_MS;
+
+        if (now >= cycleStart && now < cycleEnd) {
+            return { state: 'active', canValidate: true, cycleStart, cycleEnd };
+        }
+
+        if (now >= cycleEnd && now < nextCycleStart) {
+            return { state: 'break', canValidate: false, cycleStart, cycleEnd, nextCycleStart };
+        }
+
+        return { state: 'waiting-next', canValidate: false, nextCycleStart };
+    } catch (error) {
+        console.warn('Falling back to local weekly cycle schedule:', error);
+
+        const cycleStart = new Date(fallback.cycleStartAt).getTime();
+        const cycleEnd = new Date(fallback.cycleEndAt).getTime();
+        const nextCycleStart = new Date(fallback.nextCycleStartAt).getTime();
+
+        if (fallback.isBreak) {
+            return { state: 'break', canValidate: false, cycleStart, cycleEnd, nextCycleStart };
+        }
+
+        if (now >= cycleStart && now < cycleEnd) {
+            return { state: 'active', canValidate: true, cycleStart, cycleEnd };
+        }
+
+        return { state: 'waiting-next', canValidate: false, nextCycleStart };
     }
-
-    if (now >= cycleEnd && now < nextCycleStart) {
-        return { state: 'break', canValidate: false, nextCycleStart };
-    }
-
-    return { state: 'waiting-next', canValidate: false };
 };
 
 export const getCurrentUserId = async () => {
@@ -89,6 +121,8 @@ export const createPlanPurchase = async (userId: string, planId: PlanId) => {
         status: 'active' as PlanStatus,
         max_validations: PLAN_LIMITS[planId],
         used_validations: 0,
+        validation_credit_total: PLANS_CONFIG[planId].maxValidations,
+        validation_credit_remaining: PLANS_CONFIG[planId].maxValidations,
         started_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
     };
@@ -121,13 +155,26 @@ export const markPlanCompleted = async (plan: PlanPurchase) => {
     return data as PlanPurchase;
 };
 
-export const consumeActivePlanValidation = async (plan: PlanPurchase) => {
-    const nextUsed = plan.used_validations + 1;
+export const isPlanExhausted = (plan: PlanPurchase | null | undefined) => (
+    isPlanCreditExhausted(plan)
+);
+
+export const shouldAutoCompletePlan = (
+    plan: PlanPurchase | null | undefined
+) => {
+    if (!plan) return false;
+    return isPlanExhausted(plan);
+};
+
+export const consumeActivePlanValidation = async (plan: PlanPurchase, validationCost = 0) => {
+    const nextUsed = Number(plan.used_validations || 0) + 1;
     const now = new Date().toISOString();
-    const isComplete = nextUsed >= plan.max_validations;
+    const nextRemaining = Math.max(getPlanRemainingCredit(plan) - Math.max(Number(validationCost || 0), 0), 0);
+    const isComplete = nextRemaining <= 0.009;
 
     const updatePayload: Record<string, any> = {
         used_validations: nextUsed,
+        validation_credit_remaining: nextRemaining,
         last_validation_at: now,
         updated_at: now
     };
@@ -178,25 +225,72 @@ export const getPlanAccessForCurrentUser = async (): Promise<PlanAccessResult> =
             };
         }
 
-        const activePlan = await fetchActivePlan(userId);
-        if (!activePlan) return { status: 'no-plan' };
-
-        // Check if plan started before current cycle (expired)
-        if (cycleState.cycleStart) {
-            const planStart = new Date(activePlan.started_at).getTime();
-            if (planStart < cycleState.cycleStart) {
-                await markPlanCompleted(activePlan); 
-                return { status: 'exhausted', message: 'Seu plano expirou com o fim do ciclo anterior.' } as any;
-            }
-        }
-
-        if (activePlan.used_validations >= activePlan.max_validations) {
+        let activePlan = await fetchActivePlan(userId);
+        let exhaustedPlanDetected = false;
+        if (activePlan && isPlanExhausted(activePlan)) {
+            exhaustedPlanDetected = true;
             await markPlanCompleted(activePlan);
-            return { status: 'exhausted' };
+            activePlan = null;
         }
 
-        return { status: 'ok', userId, plan: activePlan };
+        if (activePlan) {
+            return { status: 'ok', userId, plan: activePlan, creditSource: 'plan' };
+        }
+
+        const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('compensatory_credit_balance')
+            .eq('id', userId)
+            .maybeSingle();
+
+        if (profileError) {
+            throw profileError;
+        }
+
+        const compensatoryBalance = Math.max(Number(profile?.compensatory_credit_balance || 0), 0);
+        if (compensatoryBalance > PLAN_CREDIT_EPSILON) {
+            return { status: 'ok', userId, plan: null, creditSource: 'compensatory' };
+        }
+
+        return exhaustedPlanDetected ? { status: 'exhausted' } : { status: 'no-plan' };
     } catch (error: any) {
         return { status: 'error', message: error?.message || 'Erro ao verificar plano.' };
     }
 };
+
+export const hasActiveSellerLink = async (userId: string): Promise<boolean> => {
+    void userId;
+    const { data, error } = await supabase.rpc('user_has_active_seller_link');
+
+    if (error) throw error;
+    return data === true;
+};
+
+export type SellerCampaignAccess = {
+    has_access: boolean;
+    seller_id: string | null;
+    seller_name: string | null;
+    seller_code: string | null;
+    seller_referral_id: number | null;
+    source: SellerCampaignSource | null;
+    campaign_enabled_at: string | null;
+    affiliate_link: string | null;
+};
+
+export const getMySellerCampaignAccess = async (): Promise<SellerCampaignAccess> => {
+    const { data, error } = await supabase.rpc('get_my_seller_campaign_access');
+    if (error) throw error;
+
+    const row = Array.isArray(data) ? data[0] : data;
+    return {
+        has_access: row?.has_access === true,
+        seller_id: row?.seller_id || null,
+        seller_name: row?.seller_name || null,
+        seller_code: row?.seller_code || null,
+        seller_referral_id: row?.seller_referral_id ?? null,
+        source: row?.source || null,
+        campaign_enabled_at: row?.campaign_enabled_at || null,
+        affiliate_link: row?.affiliate_link || null
+    };
+};
+

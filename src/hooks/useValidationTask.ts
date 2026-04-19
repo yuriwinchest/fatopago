@@ -93,7 +93,12 @@ export function useValidationTask() {
         if (data) setRecentValidations(data);
     };
 
-    const handleVote = async (verdict: boolean | null, justification?: string, proofLink?: string) => {
+    const handleVote = async (
+        verdict: boolean | null,
+        justification?: string,
+        proofLink?: string,
+        proofImageUrl?: string
+    ) => {
         if (!task) return;
 
         setVoting(true);
@@ -104,7 +109,8 @@ export function useValidationTask() {
                 p_task_id: task.id,
                 p_verdict: verdict,
                 p_justification: verdict ? null : (justification?.trim() || null),
-                p_proof_link: verdict ? null : (proofLink?.trim() || null)
+                p_proof_link: verdict ? null : (proofLink?.trim() || null),
+                p_proof_image_url: verdict ? null : (proofImageUrl?.trim() || null)
             });
 
             if (error) {

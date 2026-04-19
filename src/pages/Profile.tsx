@@ -24,6 +24,7 @@ import { useLocation } from '../hooks/useLocation';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { cn } from '../utils/classNames';
+import { buildProfileForgotPasswordRedirectUrl } from '../lib/passwordRecovery';
 
 const Profile = () => {
     const normalizePhone = (value: string) => value.replace(/\D/g, '');
@@ -39,6 +40,7 @@ const Profile = () => {
     const [copied, setCopied] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [isRedirectingToPasswordRecovery, setIsRedirectingToPasswordRecovery] = useState(false);
     const [isSavingAccount, setIsSavingAccount] = useState(false);
     const [accountError, setAccountError] = useState<string | null>(null);
     const [accountSuccess, setAccountSuccess] = useState<string | null>(null);
@@ -216,10 +218,21 @@ const Profile = () => {
     const handleDeleteAccount = async () => {
         try {
             setIsDeleting(true);
+            setAccountError(null);
+            setAccountSuccess(null);
 
-            const { data, error } = await supabase.functions.invoke('delete-account');
+            const { data: userRes, error: userErr } = await supabase.auth.getUser();
+            if (userErr) throw userErr;
+            const userId = userRes.user?.id;
+            if (!userId) throw new Error('Usuário não autenticado.');
+
+            const { data, error } = await supabase.rpc('close_user_account', {
+                p_target_user_id: userId
+            });
             if (error) throw error;
-            if ((data as any)?.error) throw new Error((data as any).error);
+            if ((data as any)?.status === 'error') {
+                throw new Error((data as any)?.message || 'Falha ao encerrar conta.');
+            }
 
             await supabase.auth.signOut();
             navigate('/');
@@ -229,6 +242,29 @@ const Profile = () => {
         } finally {
             setIsDeleting(false);
             setShowDeleteConfirm(false);
+        }
+    };
+
+    const handleChangePassword = async () => {
+        try {
+            setIsRedirectingToPasswordRecovery(true);
+            setAccountError(null);
+            setAccountSuccess(null);
+
+            const { data: userRes, error: userErr } = await supabase.auth.getUser();
+            if (userErr) throw userErr;
+
+            const userEmail = (userRes.user?.email || profile?.email || editEmail || '').trim();
+            const redirectUrl = buildProfileForgotPasswordRedirectUrl(window.location.origin, userEmail);
+
+            const { error: signOutError } = await supabase.auth.signOut();
+            if (signOutError) throw signOutError;
+
+            window.location.replace(redirectUrl);
+        } catch (error: any) {
+            console.error('Erro ao iniciar alteração de senha:', error);
+            setAccountError(error?.message || 'Não foi possível iniciar a alteração de senha.');
+            setIsRedirectingToPasswordRecovery(false);
         }
     };
 
@@ -297,7 +333,7 @@ const Profile = () => {
                                 </div>
 
                                 <h2 className="text-center text-2xl font-black text-white">
-                                    {profile?.name || 'Usuario'} {profile?.lastname || ''}
+                                    {profile?.name || 'Usuário'} {profile?.lastname || ''}
                                 </h2>
                                 <p className="mt-1 flex items-center justify-center gap-1 text-sm text-slate-300">
                                     <MapPin className="h-3 w-3" />
@@ -319,13 +355,13 @@ const Profile = () => {
                             <Card tone="default" className="border-white/10 bg-[#1A1040] p-4 text-center">
                                 <Activity className="mx-auto mb-2 h-5 w-5 text-green-400" />
                                 <p className="text-xl font-black text-white">{stats.total}</p>
-                                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Validacoes</p>
+                                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Validações</p>
                             </Card>
 
                             <Card tone="default" className="border-white/10 bg-[#1A1040] p-4 text-center">
                                 <CheckCircle className="mx-auto mb-2 h-5 w-5 text-blue-400" />
                                 <p className="text-xl font-black text-white">{stats.accuracy}%</p>
-                                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Precisao</p>
+                                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Precisão</p>
                             </Card>
                         </div>
                     </aside>
@@ -343,7 +379,7 @@ const Profile = () => {
                                     )}
                                 >
                                     <History className="h-4 w-4" />
-                                    Historico
+                                    Histórico
                                 </button>
 
                                 <button
@@ -356,7 +392,7 @@ const Profile = () => {
                                     )}
                                 >
                                     <Settings className="h-4 w-4" />
-                                    Configuracoes
+                                    Configurações
                                 </button>
                             </div>
                         </Card>
@@ -372,7 +408,7 @@ const Profile = () => {
                                                 </div>
                                                 <div className="overflow-hidden">
                                                     <p className="mb-1 truncate text-sm font-bold text-white">
-                                                        {item.news_tasks?.content?.title || 'Noticia indisponivel'}
+                                                        {item.news_tasks?.content?.title || 'Notícia indisponível'}
                                                     </p>
                                                     <div className="flex items-center gap-2">
                                                         <span className={`rounded px-2 py-0.5 text-[10px] font-bold ${item.verdict ? 'bg-green-500/20 text-green-300' : 'bg-red-500/20 text-red-300'}`}>
@@ -389,7 +425,7 @@ const Profile = () => {
                                 ) : (
                                     <div className="py-12 text-center text-slate-500">
                                         <History className="mx-auto mb-3 h-12 w-12 opacity-20" />
-                                        <p>Nenhuma validacao encontrada.</p>
+                                        <p>Nenhuma validação encontrada.</p>
                                     </div>
                                 )}
                             </Card>
@@ -444,6 +480,25 @@ const Profile = () => {
                                                     className="w-full rounded-xl border border-white/10 bg-[#0F0529] px-4 py-3 text-sm font-medium text-white placeholder:text-slate-600 focus:border-purple-500/50 focus:outline-none"
                                                     placeholder="Seu sobrenome"
                                                 />
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                            <div>
+                                                <label className="mb-1 block text-xs font-bold text-slate-400">CPF</label>
+                                                <div className="w-full rounded-xl border border-white/5 bg-[#0F0529]/60 px-4 py-3 text-sm font-medium text-slate-300">
+                                                    {profile?.cpf
+                                                        ? profile.cpf.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4')
+                                                        : 'Não informado'}
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <label className="mb-1 block text-xs font-bold text-slate-400">Data de nascimento</label>
+                                                <div className="w-full rounded-xl border border-white/5 bg-[#0F0529]/60 px-4 py-3 text-sm font-medium text-slate-300">
+                                                    {profile?.birth_date
+                                                        ? new Date(profile.birth_date + 'T00:00:00').toLocaleDateString('pt-BR')
+                                                        : 'Não informado'}
+                                                </div>
                                             </div>
                                         </div>
 
@@ -533,7 +588,7 @@ const Profile = () => {
                                                 )}
                                                 {!!editState && !loadingCities && cities.length === 0 && (
                                                     <p className="mt-1 text-[11px] text-amber-300/90">
-                                                        Nao foi possivel carregar a lista agora. Digite sua cidade manualmente.
+                                                        Não foi possível carregar a lista agora. Digite sua cidade manualmente.
                                                     </p>
                                                 )}
                                             </div>
@@ -579,7 +634,7 @@ const Profile = () => {
                                             'text-sm font-bold uppercase tracking-wider',
                                             profile?.referral_active ? 'text-purple-200' : 'text-slate-400'
                                         )}>
-                                            Indicacao e ganhos
+                                            Indicação e ganhos
                                         </h3>
 
                                         {profile?.referral_active ? (
@@ -596,7 +651,7 @@ const Profile = () => {
                                     {profile?.referral_active ? (
                                         <div className="space-y-4">
                                             <div className="rounded-xl border border-purple-500/20 bg-[#0F0529] p-3">
-                                                <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-400">Seu codigo de indicacao</p>
+                                                <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-400">Seu código de indicação</p>
                                                 <div className="flex items-center justify-between gap-3 rounded-lg border border-white/5 bg-black/40 p-3">
                                                     <div className="flex min-w-0 flex-1 items-center gap-3">
                                                         <code className="truncate font-mono text-xl font-bold tracking-[0.2em] text-white">
@@ -630,29 +685,42 @@ const Profile = () => {
                                                 </div>
                                             </div>
                                             <p className="text-xs text-slate-300">
-                                                Compartilhe este codigo e ganhe comissoes por cada novo validador ativo.
+                                                Compartilhe este código e ganhe comissões por cada novo validador ativo.
                                             </p>
                                         </div>
                                     ) : (
                                         <div className="py-2 text-center">
                                             <p className="mb-2 text-sm font-medium text-slate-300">
-                                                Desbloqueie seu codigo de indicacao
+                                                Desbloqueie seu código de indicação
                                             </p>
                                             <p className="text-xs text-slate-500">
-                                                Adquira um plano para indicar amigos e ganhar comissoes em dinheiro.
+                                                Adquira um plano para indicar amigos e ganhar comissões em dinheiro.
                                             </p>
                                         </div>
                                     )}
                                 </Card>
 
                                 <Card tone="default" className="border-white/10 bg-[#1A1040] p-5">
-                                    <h3 className="mb-4 text-sm font-bold uppercase tracking-wider text-white">Seguranca</h3>
-                                    <button className="group flex w-full items-center justify-between rounded-xl border border-white/10 bg-[#0F0529] p-3 text-left transition-colors hover:border-purple-500/50">
+                                    <h3 className="mb-4 text-sm font-bold uppercase tracking-wider text-white">Segurança</h3>
+                                    <button
+                                        type="button"
+                                        onClick={() => void handleChangePassword()}
+                                        disabled={isRedirectingToPasswordRecovery}
+                                        className="group flex w-full items-center justify-between rounded-xl border border-white/10 bg-[#0F0529] p-3 text-left transition-colors hover:border-purple-500/50 disabled:cursor-wait disabled:opacity-70"
+                                    >
                                         <div>
                                             <p className="text-sm font-bold text-white">Alterar Senha</p>
-                                            <p className="text-xs text-slate-500 transition-colors group-hover:text-purple-300">Atualize sua senha de acesso</p>
+                                            <p className="text-xs text-slate-500 transition-colors group-hover:text-purple-300">
+                                                {isRedirectingToPasswordRecovery
+                                                    ? 'Desconectando e preparando o envio do link...'
+                                                    : 'Desconecte-se com segurança e solicite um novo link por e-mail'}
+                                            </p>
                                         </div>
-                                        <Settings className="h-4 w-4 text-slate-600 group-hover:text-purple-400" />
+                                        {isRedirectingToPasswordRecovery ? (
+                                            <Loader2 className="h-4 w-4 animate-spin text-purple-400" />
+                                        ) : (
+                                            <Settings className="h-4 w-4 text-slate-600 group-hover:text-purple-400" />
+                                        )}
                                     </button>
                                 </Card>
 

@@ -12,6 +12,12 @@ import {
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { getSellerCommissionAmount, SELLER_COMMISSION_RATE } from '../../lib/sellerMetrics';
+import {
+    getSellerFunnelEventLabel,
+    getSellerFunnelEventTone,
+    SellerFunnelEventRow,
+    SellerFunnelSummary
+} from '../../lib/sellerFunnel';
 
 type SellerListItem = {
     id: string;
@@ -64,6 +70,8 @@ interface SellerReport {
     seller: Record<string, unknown>;
     referred_users: ReportReferral[];
     sales: ReportSale[];
+    funnel_summary?: SellerFunnelSummary;
+    funnel_events?: SellerFunnelEventRow[];
 }
 
 interface SellerSalesReportProps {
@@ -71,6 +79,16 @@ interface SellerSalesReportProps {
     sellersLoading: boolean;
     sellersError: string | null;
     loadSellers: () => Promise<void>;
+}
+
+interface PaginationControlsProps {
+    page: number;
+    totalPages: number;
+    totalItems: number;
+    pageSize: number;
+    itemLabel: string;
+    onPrevious: () => void;
+    onNext: () => void;
 }
 
 const PLAN_LABELS: Record<string, string> = {
@@ -84,6 +102,8 @@ const PLAN_LABELS: Record<string, string> = {
     expert_weekly: 'Expert Semanal',
     expert_monthly: 'Expert Mensal'
 };
+
+const SELLER_REPORT_PAGE_SIZE = 10;
 
 const formatCurrency = (value: number | string | null | undefined) =>
     Number(value || 0).toLocaleString('pt-BR', {
@@ -99,6 +119,52 @@ const formatDateTime = (value?: string | null) => {
     }).format(new Date(value));
 };
 
+const PaginationControls: React.FC<PaginationControlsProps> = ({
+    page,
+    totalPages,
+    totalItems,
+    pageSize,
+    itemLabel,
+    onPrevious,
+    onNext
+}) => {
+    if (totalItems <= pageSize) {
+        return null;
+    }
+
+    const startItem = (page - 1) * pageSize + 1;
+    const endItem = Math.min(page * pageSize, totalItems);
+
+    return (
+        <div className="mt-3 flex flex-col gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs text-slate-400">
+                Mostrando {startItem} a {endItem} de {totalItems} {itemLabel}
+            </p>
+            <div className="flex items-center justify-end gap-2">
+                <button
+                    type="button"
+                    onClick={onPrevious}
+                    disabled={page <= 1}
+                    className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-black uppercase tracking-[0.16em] text-slate-200 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                    Anterior
+                </button>
+                <span className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">
+                    Página {page} de {totalPages}
+                </span>
+                <button
+                    type="button"
+                    onClick={onNext}
+                    disabled={page >= totalPages}
+                    className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-black uppercase tracking-[0.16em] text-slate-200 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                    Próxima
+                </button>
+            </div>
+        </div>
+    );
+};
+
 const SellerSalesReport: React.FC<SellerSalesReportProps> = ({
     sellers,
     sellersLoading,
@@ -110,6 +176,8 @@ const SellerSalesReport: React.FC<SellerSalesReportProps> = ({
     const [reports, setReports] = useState<Record<string, SellerReport>>({});
     const [loadingReportId, setLoadingReportId] = useState<string | null>(null);
     const [reportErrors, setReportErrors] = useState<Record<string, string>>({});
+    const [funnelPageBySeller, setFunnelPageBySeller] = useState<Record<string, number>>({});
+    const [referralPageBySeller, setReferralPageBySeller] = useState<Record<string, number>>({});
 
     const filteredSellers = [...(sellers || [])]
         .sort((a, b) => {
@@ -147,8 +215,18 @@ const SellerSalesReport: React.FC<SellerSalesReportProps> = ({
                 [sellerId]: {
                     seller: report.seller || {},
                     referred_users: Array.isArray(report.referred_users) ? report.referred_users : [],
-                    sales: Array.isArray(report.sales) ? report.sales : []
+                    sales: Array.isArray(report.sales) ? report.sales : [],
+                    funnel_summary: report.funnel_summary || undefined,
+                    funnel_events: Array.isArray(report.funnel_events) ? report.funnel_events : []
                 }
+            }));
+            setFunnelPageBySeller((prev) => ({
+                ...prev,
+                [sellerId]: prev[sellerId] || 1
+            }));
+            setReferralPageBySeller((prev) => ({
+                ...prev,
+                [sellerId]: prev[sellerId] || 1
             }));
         } catch (err: any) {
             setReportErrors((prev) => ({
@@ -167,6 +245,14 @@ const SellerSalesReport: React.FC<SellerSalesReportProps> = ({
         }
 
         setSelectedSellerId(sellerId);
+        setFunnelPageBySeller((prev) => ({
+            ...prev,
+            [sellerId]: 1
+        }));
+        setReferralPageBySeller((prev) => ({
+            ...prev,
+            [sellerId]: 1
+        }));
 
         if (!reports[sellerId]) {
             void loadReport(sellerId);
@@ -340,6 +426,32 @@ const SellerSalesReport: React.FC<SellerSalesReportProps> = ({
                         const sellerInitial = seller.name?.trim()?.charAt(0)?.toUpperCase() || 'V';
                         const weekCommission = getSellerCommissionAmount(Number(seller.week_revenue || 0));
                         const totalCommission = getSellerCommissionAmount(Number(seller.total_revenue || 0));
+                        const funnelEvents = Array.isArray(report?.funnel_events) ? report.funnel_events : [];
+                        const referredUsers = Array.isArray(report?.referred_users) ? report.referred_users : [];
+                        const funnelTotalPages = Math.max(
+                            1,
+                            Math.ceil(funnelEvents.length / SELLER_REPORT_PAGE_SIZE)
+                        );
+                        const referralTotalPages = Math.max(
+                            1,
+                            Math.ceil(referredUsers.length / SELLER_REPORT_PAGE_SIZE)
+                        );
+                        const funnelPage = Math.min(
+                            funnelPageBySeller[seller.id] || 1,
+                            funnelTotalPages
+                        );
+                        const referralPage = Math.min(
+                            referralPageBySeller[seller.id] || 1,
+                            referralTotalPages
+                        );
+                        const paginatedFunnelEvents = funnelEvents.slice(
+                            (funnelPage - 1) * SELLER_REPORT_PAGE_SIZE,
+                            funnelPage * SELLER_REPORT_PAGE_SIZE
+                        );
+                        const paginatedReferredUsers = referredUsers.slice(
+                            (referralPage - 1) * SELLER_REPORT_PAGE_SIZE,
+                            referralPage * SELLER_REPORT_PAGE_SIZE
+                        );
 
                         return (
                             <article
@@ -475,6 +587,188 @@ const SellerSalesReport: React.FC<SellerSalesReportProps> = ({
                                         {/* Report loaded */}
                                         {report && !isLoadingReport && (
                                             <div className="space-y-5">
+                                                <div>
+                                                    <div className="mb-3 flex items-center justify-between">
+                                                        <h4 className="text-sm font-black uppercase tracking-[0.2em] text-cyan-300/80">
+                                                            Funil comercial do link
+                                                        </h4>
+                                                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
+                                                            Visível no admin deste vendedor
+                                                        </span>
+                                                    </div>
+
+                                                    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+                                                        <div className="rounded-2xl border border-cyan-400/15 bg-cyan-500/5 p-4">
+                                                            <p className="text-[10px] font-black uppercase tracking-[0.24em] text-cyan-200/70">
+                                                                Clique no link
+                                                            </p>
+                                                            <p className="mt-2 text-2xl font-black text-white">
+                                                                {Number(report.funnel_summary?.link_clicks || 0)}
+                                                            </p>
+                                                            <p className="mt-1 text-xs text-slate-400">
+                                                                Visitantes únicos: {Number(report.funnel_summary?.unique_link_clicks || 0)}
+                                                            </p>
+                                                        </div>
+
+                                                        <div className="rounded-2xl border border-sky-400/15 bg-sky-500/5 p-4">
+                                                            <p className="text-[10px] font-black uppercase tracking-[0.24em] text-sky-200/70">
+                                                                Visita no convite
+                                                            </p>
+                                                            <p className="mt-2 text-2xl font-black text-white">
+                                                                {Number(report.funnel_summary?.invite_visits || 0)}
+                                                            </p>
+                                                            <p className="mt-1 text-xs text-slate-400">
+                                                                Visitantes únicos: {Number(report.funnel_summary?.unique_invite_visits || 0)}
+                                                            </p>
+                                                        </div>
+
+                                                        <div className="rounded-2xl border border-purple-400/15 bg-purple-500/5 p-4">
+                                                            <p className="text-[10px] font-black uppercase tracking-[0.24em] text-purple-200/70">
+                                                                Cadastro concluído
+                                                            </p>
+                                                            <p className="mt-2 text-2xl font-black text-white">
+                                                                {Number(report.funnel_summary?.registrations || 0)}
+                                                            </p>
+                                                            <p className="mt-1 text-xs text-slate-400">
+                                                                Usuários únicos: {Number(report.funnel_summary?.unique_registrations || 0)}
+                                                            </p>
+                                                        </div>
+
+                                                        <div className="rounded-2xl border border-amber-400/15 bg-amber-500/5 p-4">
+                                                            <p className="text-[10px] font-black uppercase tracking-[0.24em] text-amber-200/70">
+                                                                Compra gerada
+                                                            </p>
+                                                            <p className="mt-2 text-2xl font-black text-white">
+                                                                {Number(report.funnel_summary?.pix_generated || 0)}
+                                                            </p>
+                                                            <p className="mt-1 text-xs text-slate-400">
+                                                                Compradores únicos: {Number(report.funnel_summary?.unique_pix_generated || 0)}
+                                                            </p>
+                                                        </div>
+
+                                                        <div className="rounded-2xl border border-emerald-400/15 bg-emerald-500/5 p-4">
+                                                            <p className="text-[10px] font-black uppercase tracking-[0.24em] text-emerald-200/70">
+                                                                Compra aprovada
+                                                            </p>
+                                                            <p className="mt-2 text-2xl font-black text-white">
+                                                                {Number(report.funnel_summary?.pix_approved || 0)}
+                                                            </p>
+                                                            <p className="mt-1 text-xs text-slate-400">
+                                                                Compradores únicos: {Number(report.funnel_summary?.unique_pix_approved || 0)}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div>
+                                                    <div className="mb-3 flex items-center justify-between">
+                                                        <h4 className="text-sm font-black uppercase tracking-[0.2em] text-slate-500">
+                                                            Linha do tempo do funil
+                                                        </h4>
+                                                        <span className="text-xs text-slate-500">
+                                                            Clique, visita, cadastro e compra
+                                                        </span>
+                                                    </div>
+
+                                                    {funnelEvents.length > 0 ? (
+                                                        <>
+                                                            <div className="overflow-x-auto rounded-2xl border border-white/10">
+                                                                <table className="w-full min-w-[760px] text-sm">
+                                                                    <thead>
+                                                                        <tr className="border-b border-white/10 bg-white/[0.03]">
+                                                                            <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
+                                                                                Evento
+                                                                            </th>
+                                                                            <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
+                                                                                Pessoa
+                                                                            </th>
+                                                                            <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
+                                                                                Plano / valor
+                                                                            </th>
+                                                                            <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
+                                                                                Origem
+                                                                            </th>
+                                                                            <th className="px-4 py-3 text-right text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
+                                                                                Data
+                                                                            </th>
+                                                                        </tr>
+                                                                    </thead>
+                                                                    <tbody>
+                                                                    {paginatedFunnelEvents.map((event) => {
+                                                                        const eventName = [event.referred_name, event.referred_lastname]
+                                                                            .filter(Boolean)
+                                                                            .join(' ')
+                                                                            .trim();
+
+                                                                        return (
+                                                                            <tr key={event.id} className="border-b border-white/5 transition hover:bg-white/[0.02]">
+                                                                                <td className="px-4 py-3">
+                                                                                    <span className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.18em] ${getSellerFunnelEventTone(event.event_type)}`}>
+                                                                                        {getSellerFunnelEventLabel(event.event_type)}
+                                                                                    </span>
+                                                                                </td>
+                                                                                <td className="px-4 py-3">
+                                                                                    <div className="min-w-0">
+                                                                                        <p className="truncate font-bold text-white">
+                                                                                            {eventName || 'Visitante não identificado'}
+                                                                                        </p>
+                                                                                        <p className="truncate text-xs text-slate-400">
+                                                                                            {event.referred_email || event.visitor_id || 'Sem identificação'}
+                                                                                        </p>
+                                                                                    </div>
+                                                                                </td>
+                                                                                <td className="px-4 py-3 text-slate-300">
+                                                                                    <div className="flex flex-col">
+                                                                                        <span>{event.plan_id ? (PLAN_LABELS[event.plan_id] || event.plan_id) : '—'}</span>
+                                                                                        <span className="text-xs text-slate-500">
+                                                                                            {event.amount ? formatCurrency(event.amount) : '—'}
+                                                                                        </span>
+                                                                                    </div>
+                                                                                </td>
+                                                                                <td className="px-4 py-3 text-slate-300">
+                                                                                    <div className="flex flex-col">
+                                                                                        <span>{event.path || '—'}</span>
+                                                                                        <span className="text-xs text-slate-500 uppercase">
+                                                                                            {event.source || 'link'}
+                                                                                        </span>
+                                                                                    </div>
+                                                                                </td>
+                                                                                <td className="whitespace-nowrap px-4 py-3 text-right text-xs text-slate-400">
+                                                                                    {formatDateTime(event.created_at)}
+                                                                                </td>
+                                                                            </tr>
+                                                                        );
+                                                                    })}
+                                                                    </tbody>
+                                                                </table>
+                                                            </div>
+                                                            <PaginationControls
+                                                                page={funnelPage}
+                                                                totalPages={funnelTotalPages}
+                                                                totalItems={funnelEvents.length}
+                                                                pageSize={SELLER_REPORT_PAGE_SIZE}
+                                                                itemLabel="eventos"
+                                                                onPrevious={() =>
+                                                                    setFunnelPageBySeller((prev) => ({
+                                                                        ...prev,
+                                                                        [seller.id]: Math.max(1, funnelPage - 1)
+                                                                    }))
+                                                                }
+                                                                onNext={() =>
+                                                                    setFunnelPageBySeller((prev) => ({
+                                                                        ...prev,
+                                                                        [seller.id]: Math.min(funnelTotalPages, funnelPage + 1)
+                                                                    }))
+                                                                }
+                                                            />
+                                                        </>
+                                                    ) : (
+                                                        <div className="rounded-2xl border border-dashed border-white/10 bg-[#0f0524] px-4 py-8 text-center text-sm text-slate-400">
+                                                            Ainda não há eventos de funil registrados para este vendedor.
+                                                        </div>
+                                                    )}
+                                                </div>
+
                                                 {/* Sales table */}
                                                 <div>
                                                     <div className="mb-3 flex items-center justify-between">
@@ -611,28 +905,29 @@ const SellerSalesReport: React.FC<SellerSalesReportProps> = ({
                                                 </div>
 
                                                 {/* Referred users */}
-                                                {report.referred_users.length > 0 && (
+                                                {referredUsers.length > 0 && (
                                                     <div>
                                                         <h4 className="mb-3 text-sm font-black uppercase tracking-[0.2em] text-slate-500">
-                                                            Cadastros via link ({report.referred_users.length})
+                                                            Cadastros via link ({referredUsers.length})
                                                         </h4>
-                                                        <div className="overflow-x-auto rounded-2xl border border-white/10">
-                                                            <table className="w-full min-w-[480px] text-sm">
-                                                                <thead>
-                                                                    <tr className="border-b border-white/10 bg-white/[0.03]">
-                                                                        <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
-                                                                            Usuario
-                                                                        </th>
-                                                                        <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
-                                                                            Cidade / Estado
-                                                                        </th>
-                                                                        <th className="px-4 py-3 text-right text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
-                                                                            Data de cadastro
-                                                                        </th>
-                                                                    </tr>
-                                                                </thead>
-                                                                <tbody>
-                                                                    {report.referred_users.map((ref) => {
+                                                        <>
+                                                            <div className="overflow-x-auto rounded-2xl border border-white/10">
+                                                                <table className="w-full min-w-[480px] text-sm">
+                                                                    <thead>
+                                                                        <tr className="border-b border-white/10 bg-white/[0.03]">
+                                                                            <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
+                                                                                Usuário
+                                                                            </th>
+                                                                            <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
+                                                                                Cidade / Estado
+                                                                            </th>
+                                                                            <th className="px-4 py-3 text-right text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
+                                                                                Data de cadastro
+                                                                            </th>
+                                                                        </tr>
+                                                                    </thead>
+                                                                    <tbody>
+                                                                    {paginatedReferredUsers.map((ref) => {
                                                                         const refName = [ref.name, ref.lastname]
                                                                             .filter(Boolean)
                                                                             .join(' ')
@@ -685,20 +980,40 @@ const SellerSalesReport: React.FC<SellerSalesReportProps> = ({
                                                                             </tr>
                                                                         );
                                                                     })}
-                                                                </tbody>
-                                                            </table>
-                                                        </div>
+                                                                    </tbody>
+                                                                </table>
+                                                            </div>
+                                                            <PaginationControls
+                                                                page={referralPage}
+                                                                totalPages={referralTotalPages}
+                                                                totalItems={referredUsers.length}
+                                                                pageSize={SELLER_REPORT_PAGE_SIZE}
+                                                                itemLabel="cadastros"
+                                                                onPrevious={() =>
+                                                                    setReferralPageBySeller((prev) => ({
+                                                                        ...prev,
+                                                                        [seller.id]: Math.max(1, referralPage - 1)
+                                                                    }))
+                                                                }
+                                                                onNext={() =>
+                                                                    setReferralPageBySeller((prev) => ({
+                                                                        ...prev,
+                                                                        [seller.id]: Math.min(referralTotalPages, referralPage + 1)
+                                                                    }))
+                                                                }
+                                                            />
+                                                        </>
                                                     </div>
                                                 )}
 
                                                 {/* Empty state - no referrals at all */}
-                                                {report.referred_users.length === 0 && report.sales.length === 0 && (
+                                                {referredUsers.length === 0 && report.sales.length === 0 && (
                                                     <div className="rounded-2xl border border-dashed border-amber-500/20 bg-amber-500/5 px-4 py-6 text-center">
                                                         <p className="text-sm font-bold text-amber-200">
-                                                            Nenhum usuario se cadastrou usando o link deste vendedor.
+                                                            Nenhum usuário se cadastrou usando o link deste vendedor.
                                                         </p>
                                                         <p className="mt-2 text-xs text-slate-400">
-                                                            Verifique se o vendedor esta divulgando o link correto:{' '}
+                                                            Verifique se o vendedor está divulgando o link correto:{' '}
                                                             <span className="font-bold text-cyan-300">{seller.affiliate_link}</span>
                                                         </p>
                                                     </div>

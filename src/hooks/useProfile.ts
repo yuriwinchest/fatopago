@@ -29,53 +29,74 @@ export function useProfile() {
 
     const fetchProfileData = async () => {
         try {
-            const { data: { session } } = await supabase.auth.getSession();
-            const user = session?.user;
+            const { data: userRes, error: userError } = await supabase.auth.getUser();
+            if (userError) throw userError;
+            const user = userRes.user;
             if (!user) {
                 navigate('/login');
                 return;
             }
 
-            // 1. Get Current Cycle Start
-            const cycleRes = await supabase
-                .from('news_tasks')
-                .select('cycle_start_at')
-                .order('cycle_start_at', { ascending: false })
-                .limit(1)
-                .single();
-            
-            const currentCycleStart = cycleRes.data?.cycle_start_at;
-
-            // 2. Fetch Profile & Filtered History
+            // Fetch Profile & Full History
             const [profileRes, historyRes] = await Promise.all([
-                supabase.from('profiles').select('*').eq('id', user.id).single(),
+                supabase.from('profiles').select('*').eq('id', user.id).maybeSingle(),
                 supabase
                     .from('validations')
                     .select(`
                         id,
                         verdict,
                         created_at,
-                        news_tasks (
+                        news_tasks!task_id (
                             content
                         )
                     `)
                     .eq('user_id', user.id)
-                    .gte('created_at', currentCycleStart || new Date(0).toISOString()) // Filter by cycle start
                     .order('created_at', { ascending: false })
+                    .limit(50)
             ]);
 
             if (profileRes.error) throw profileRes.error;
+
+            const baseProfile: any = {
+                // Keep UI usable even if the row is missing or partially filled.
+                name: '',
+                lastname: '',
+                current_balance: 0,
+                reputation_score: 0,
+                city: '',
+                state: '',
+                affiliate_code: '',
+                referral_code: '',
+                referral_active: false,
+                plan_status: 'none',
+                avatar_url: null,
+                ...(profileRes.data || {})
+            };
+
+            // If the profile row does not exist yet, try to create it (best effort).
+            // We don't block the UI on this; saving will use upsert on the Profile page.
+            if (!profileRes.data) {
+                try {
+                    await supabase.from('profiles').upsert({ id: user.id }, { onConflict: 'id' });
+                } catch (e) {
+                    console.warn('Profile row missing and could not be created (best effort):', e);
+                }
+            }
+
             setProfile({
-                ...profileRes.data,
-                email: user.email
+                ...baseProfile,
+                email: (baseProfile as any)?.email || user.email
             });
+
+            if (historyRes.error) {
+                console.warn('Erro ao buscar histórico de validações:', historyRes.error);
+            }
 
             if (historyRes.data) {
                 setHistory(historyRes.data as any[]);
-                // Mock accuracy logic
                 setStats({
                     total: historyRes.data.length,
-                    accuracy: 98 // Hardcoded as per original logic
+                    accuracy: 98
                 });
             }
 
@@ -99,6 +120,7 @@ export function useProfile() {
         activeTab,
         setActiveTab,
         handleLogout,
+        refetch: fetchProfileData,
         getLevel: (xp: number) => {
             if (xp < 100) return "Novato";
             if (xp < 500) return "Observador";

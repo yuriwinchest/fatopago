@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { Loader2 } from 'lucide-react';
+import type { Session } from '@supabase/supabase-js';
 
 interface ProtectedRouteProps {
     children: React.ReactNode;
@@ -12,20 +13,37 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
 
     useEffect(() => {
-        checkAuth();
-    }, []);
+        let active = true;
 
-    const checkAuth = async () => {
-        try {
-            const { data: { session } } = await supabase.auth.getSession();
-            setIsAuthenticated(!!session);
-        } catch (error) {
-            console.error('Auth check error:', error);
-            setIsAuthenticated(false);
-        } finally {
+        const resolveSession = async () => {
+            try {
+                const { data: { session } } = await supabase.auth.getSession();
+                if (!active) return;
+                setIsAuthenticated(Boolean(session));
+            } catch (error) {
+                if (!active) return;
+                console.error('Auth check error:', error);
+                setIsAuthenticated(false);
+            } finally {
+                if (active) {
+                    setLoading(false);
+                }
+            }
+        };
+
+        const { data: authListener } = supabase.auth.onAuthStateChange((_event: string, session: Session | null) => {
+            if (!active) return;
+            setIsAuthenticated(Boolean(session));
             setLoading(false);
-        }
-    };
+        });
+
+        void resolveSession();
+
+        return () => {
+            active = false;
+            authListener.subscription.unsubscribe();
+        };
+    }, []);
 
     if (loading) {
         return (

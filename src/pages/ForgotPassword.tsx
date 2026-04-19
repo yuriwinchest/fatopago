@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { ArrowRight, ArrowLeft, Mail, AlertCircle } from 'lucide-react';
 import { useAuthRecovery } from '../hooks/useAuthRecovery';
 import { Input } from '../components/ui/Input';
@@ -6,8 +6,10 @@ import { Button } from '../components/ui/Button';
 import { AuthLayout } from '../layouts/AuthLayout';
 import { NewsCarousel } from '../components/NewsCarousel';
 import { MOCK_NEWS } from '../data/mockNews';
+import { isPasswordRecoveryRequestedFromProfile } from '../lib/passwordRecovery';
 
 const ForgotPassword = () => {
+    const location = useLocation();
     const {
         email,
         setEmail,
@@ -16,6 +18,7 @@ const ForgotPassword = () => {
         error,
         handleForgotPassword
     } = useAuthRecovery();
+    const requestedFromProfile = isPasswordRecoveryRequestedFromProfile(location.search);
 
     const LeftContent = (
         <div className="flex-1 flex flex-col px-8 lg:px-16 pt-8 pb-8">
@@ -32,7 +35,7 @@ const ForgotPassword = () => {
                         tasks={MOCK_NEWS}
                         onValidate={() => { }}
                         isReadOnly={true}
-                        autoPlay={true}
+                        autoPlay={false}
                         interval={3000}
                     />
                 </div>
@@ -54,12 +57,18 @@ const ForgotPassword = () => {
 
     return (
         <AuthLayout leftPanelContent={LeftContent}>
-            <Link to="/" className="absolute top-0 lg:top-8 left-0 lg:left-8 mb-6 relative text-slate-400 hover:text-white flex items-center gap-2 transition-colors w-fit">
+            <Link to="/login" className="relative mb-6 flex w-fit items-center gap-2 text-slate-400 transition-colors hover:text-white lg:absolute lg:left-8 lg:top-8">
                 <ArrowLeft className="w-4 h-4" /> Voltar para login
             </Link>
 
-            <h2 className="text-3xl font-bold text-white mb-2">Esqueceu a senha?</h2>
-            <p className="text-slate-400 mb-8">Digite seu e-mail e enviaremos um link para redefinir sua senha.</p>
+            <h2 className="text-3xl font-bold text-white mb-2">
+                {requestedFromProfile ? 'Alterar senha com segurança' : 'Esqueceu a senha?'}
+            </h2>
+            <p className="text-slate-400 mb-8">
+                {requestedFromProfile
+                    ? 'Por segurança, você foi desconectado. Confirme seu e-mail para receber o link de redefinição.'
+                    : 'Digite seu e-mail e enviaremos um link para redefinir sua senha.'}
+            </p>
 
             {success ? (
                 <div className="p-6 bg-green-500/10 border border-green-500/20 rounded-xl text-center animate-in fade-in zoom-in-95">
@@ -68,7 +77,7 @@ const ForgotPassword = () => {
                     </div>
                     <h3 className="text-lg font-bold text-green-400 mb-2">E-mail enviado!</h3>
                     <p className="text-slate-300 mb-6 text-sm">Verifique sua caixa de entrada (e spam) para encontrar o link de redefinição.</p>
-                    <Link to="/" className="text-white bg-green-600 hover:bg-green-700 font-medium py-2 px-4 rounded-lg transition-colors inline-block">
+                    <Link to="/login" className="inline-block rounded-lg bg-green-600 px-4 py-2 font-medium text-white transition-colors hover:bg-green-700">
                         Voltar para Login
                     </Link>
                 </div>

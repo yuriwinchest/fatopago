@@ -1,5 +1,9 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import {
+    WEEKLY_CYCLE_BREAK_MS,
+    getWeeklyCycleSnapshot
+} from '../lib/cycleSchedule';
 
 interface CycleInfo {
     cycleStartAt: string;
@@ -48,29 +52,29 @@ export function useCycleTimer() {
 
     const fetchCycleInfo = async () => {
         try {
-            const { data, error } = await supabase
-                .from('news_tasks')
-                .select('cycle_start_at, cycle_number, created_at')
-                .order('cycle_start_at', { ascending: false })
-                .limit(1)
-                .single();
+            const now = new Date();
+            const fallback = getWeeklyCycleSnapshot(now);
+            const { data, error } = (await supabase.rpc('get_validation_cycle_meta', { p_cycle_offset: 0 }))
+                || { data: null, error: null };
 
             if (error) throw error;
 
-            if (data) {
-                const startAt = new Date(data.cycle_start_at || data.created_at);
-                const endAt = new Date(startAt.getTime() + 24 * 60 * 60 * 1000);
-                const now = new Date();
-                const remaining = Math.max(0, endAt.getTime() - now.getTime());
+            const row = (Array.isArray(data) ? data[0] : data) as
+                | { cycle_start_at?: string | null; cycle_end_at?: string | null; cycle_number?: number | null }
+                | null;
 
-                setCycleInfo({
-                    cycleStartAt: startAt.toISOString(),
-                    cycleEndAt: endAt.toISOString(),
-                    nextCycleStartAt: new Date(endAt.getTime() + 30 * 60 * 1000).toISOString(),
-                    timeRemaining: remaining,
-                    currentCycleNumber: data.cycle_number || 1
-                });
-            }
+            const cycleStartAt = row?.cycle_start_at || fallback.cycleStartAt;
+            const cycleEndAt = row?.cycle_end_at || fallback.cycleEndAt;
+            const nextCycleStartAt = new Date(new Date(cycleEndAt).getTime() + WEEKLY_CYCLE_BREAK_MS).toISOString();
+            const remaining = Math.max(0, new Date(cycleEndAt).getTime() - now.getTime());
+
+            setCycleInfo({
+                cycleStartAt,
+                cycleEndAt,
+                nextCycleStartAt,
+                timeRemaining: remaining,
+                currentCycleNumber: Number(row?.cycle_number || 1)
+            });
         } catch (error) {
             console.error('Error fetching cycle info:', error);
         } finally {

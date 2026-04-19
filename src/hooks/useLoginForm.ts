@@ -34,7 +34,7 @@ export function useLoginForm() {
             }
 
             if (data.user) {
-                navigate('/dashboard');
+                navigate('/validation');
             }
         } catch (err: any) {
             const msg = err.message || "Erro ao entrar. Tente novamente.";

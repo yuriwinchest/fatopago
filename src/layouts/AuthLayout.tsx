@@ -7,42 +7,44 @@ interface AuthLayoutProps {
 
 export const AuthLayout: React.FC<AuthLayoutProps> = ({ children, leftPanelContent }) => {
     return (
-        <div className="min-h-screen flex flex-col lg:flex-row font-sans bg-[#0F0529]">
-            {/* Left Panel - Vibrant Gradient */}
-            <div className="lg:w-[45%] flex flex-col justify-between bg-gradient-to-br from-[#8a2ce2] to-[#6922D9] relative overflow-hidden text-white rounded-b-[50px] lg:rounded-none shadow-2xl z-10 min-h-[300px] lg:min-h-screen">
+        <div className="min-h-screen min-h-[100dvh] overflow-x-hidden bg-[#0F0529] pb-safe font-sans">
+            <div className="mx-auto flex min-h-screen min-h-[100dvh] w-full max-w-[1440px] flex-col overflow-x-hidden lg:px-6 xl:px-8 lg:py-6">
+                <div className="flex flex-1 flex-col lg:flex-row lg:overflow-hidden lg:rounded-[34px] lg:border lg:border-white/10 lg:bg-[#120734]/65 lg:shadow-[var(--platform-surface-shadow)]">
+                    {/* Left Panel - Vibrant Gradient */}
+                    <div className="relative z-10 flex min-h-[280px] flex-col justify-between overflow-hidden rounded-b-[42px] bg-gradient-to-br from-[#8a2ce2] to-[#6922D9] text-white shadow-2xl lg:min-h-full lg:w-[44%] lg:rounded-none lg:rounded-l-[34px]">
 
-                {/* Header with Logo */}
-                <div className="relative z-20 bg-[#2e0259] pt-8 pb-6 lg:pt-12 lg:pb-8 rounded-b-[40px] shadow-2xl flex justify-center items-center">
-                    <div className="flex items-center gap-3 transform scale-100 lg:scale-110 transition-transform">
-                        <div className="relative w-10 h-8 lg:w-12 lg:h-10 bg-gradient-to-br from-[#a855f7] to-[#7e22ce] rounded-lg flex items-center justify-center shadow-lg border border-white/20 transform -skew-x-12">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-white transform skew-x-12 w-5 h-5 lg:w-6 lg:h-6">
-                                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-                                <polyline points="22 4 12 14.01 9 11.01" />
-                            </svg>
+                        {/* Header with Logo */}
+                        <div className="relative z-20 flex items-center justify-center rounded-b-[40px] bg-[#2e0259] pb-6 pt-[calc(2rem+env(safe-area-inset-top))] shadow-2xl pl-safe pr-safe lg:rounded-b-[30px] lg:pb-8 lg:pt-12">
+                            <div className="flex scale-100 transform items-center justify-center transition-transform lg:scale-110">
+                                <img
+                                    src="/logo.png"
+                                    alt="Fatopago Logo"
+                                    className="h-auto w-48 sm:w-56 md:w-64 drop-shadow-2xl hover:scale-105 transition-transform duration-300"
+                                />
+                            </div>
                         </div>
-                        <h1 className="text-2xl lg:text-3xl font-black tracking-wide text-white drop-shadow-lg italic">FATOPAGO</h1>
+
+                        {/* Left Panel Content */}
+                        <div className="relative z-10 flex flex-1 flex-col">
+                            {leftPanelContent}
+                        </div>
+
+                        {/* Background Decor */}
+                        <img
+                            src="/watermark.png?v=4"
+                            alt=""
+                            className="pointer-events-none absolute left-1/2 top-1/2 w-[120%] -translate-x-1/2 -translate-y-1/2 select-none mix-blend-screen opacity-[0.05] blur-[1px]"
+                        />
+                        <div className="pointer-events-none absolute -right-32 -top-32 h-[500px] w-[500px] rounded-full bg-purple-400/20 blur-3xl" />
+                        <div className="pointer-events-none absolute -bottom-20 -left-20 h-[400px] w-[400px] rounded-full bg-purple-900/20 blur-3xl" />
                     </div>
-                </div>
 
-                {/* Left Panel Content */}
-                <div className="relative z-10 flex-1 flex flex-col">
-                    {leftPanelContent}
-                </div>
-
-                {/* Background Decor */}
-                <img
-                    src="/watermark.png?v=4"
-                    alt=""
-                    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] opacity-[0.05] pointer-events-none select-none mix-blend-screen blur-[1px]"
-                />
-                <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-purple-400/20 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none" />
-                <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-purple-900/20 rounded-full blur-3xl -ml-20 -mb-20 pointer-events-none" />
-            </div>
-
-            {/* Right Panel - Form Container */}
-            <div className="lg:w-[55%] bg-[#0F0529] p-6 lg:p-16 flex flex-col justify-center relative min-h-[500px]">
-                <div className="max-w-md w-full mx-auto relative z-10">
-                    {children}
+                    {/* Right Panel - Form Container */}
+                    <div className="relative flex min-h-[500px] flex-col justify-center bg-[#0F0529] px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))] pt-6 sm:px-6 lg:min-h-full lg:w-[56%] lg:bg-transparent lg:p-16 xl:p-20">
+                        <div className="relative z-10 mx-auto w-full max-w-md min-w-0">
+                            {children}
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

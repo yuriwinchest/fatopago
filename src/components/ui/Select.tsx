@@ -3,21 +3,30 @@ import { cn } from '../../utils/classNames';
 
 interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
     label?: string;
+    labelRight?: React.ReactNode;
     error?: string;
     options: { value: string | number; label: string }[];
     placeholder?: string;
 }
 
 export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
-    ({ className, label, error, options, placeholder = "Selecione", ...props }, ref) => {
-        const baseSelectStyles = "w-full bg-white border border-gray-300 rounded-xl px-4 py-3.5 focus:ring-2 focus:ring-[#9D5CFF] focus:border-transparent outline-none transition-all text-gray-900 font-medium disabled:bg-gray-100 disabled:text-gray-500 appearance-none";
+    ({ className, label, labelRight, error, options, placeholder = "Selecione", ...props }, ref) => {
+        const baseSelectStyles =
+            "w-full min-h-[var(--platform-touch-target)] touch-manipulation appearance-none rounded-[var(--radius)] border border-white/20 bg-white/95 px-4 py-3.5 text-[15px] font-medium text-[#25194a] outline-none transition-all duration-200 focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-2 focus-visible:ring-offset-[hsl(var(--background))] disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500";
 
         return (
             <div className="space-y-1.5 w-full">
                 {label && (
-                    <label className="text-sm font-semibold text-slate-300 ml-1 block">
-                        {label}
-                    </label>
+                    <div className="ml-1 flex items-center justify-between gap-4">
+                        <label className="block text-sm font-semibold text-slate-300">
+                            {label}
+                        </label>
+                        {labelRight && (
+                            <div className="text-xs font-medium text-slate-300">
+                                {labelRight}
+                            </div>
+                        )}
+                    </div>
                 )}
 
                 <div className="relative">
@@ -39,7 +48,7 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
                     </select>
 
                     {/* Chevron icon custom */}
-                    <div className="absolute right-3 top-4 pointer-events-none text-gray-500">
+                    <div className="pointer-events-none absolute right-3 top-4 text-gray-500">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
                         </svg>

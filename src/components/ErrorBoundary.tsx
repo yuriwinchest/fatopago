@@ -1,6 +1,8 @@
 
 import { Component, ErrorInfo, ReactNode } from 'react';
+import * as Sentry from '@sentry/react';
 import { AlertTriangle, RotateCw } from 'lucide-react';
+import { attemptChunkRecovery, isChunkLoadError } from '../lib/chunkRecovery';
 
 interface Props {
     children?: ReactNode;
@@ -22,6 +24,15 @@ class ErrorBoundary extends Component<Props, State> {
     }
 
     public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+        if (isChunkLoadError(error) && attemptChunkRecovery()) {
+            return;
+        }
+
+        Sentry.captureException(error, {
+            extra: {
+                componentStack: errorInfo.componentStack,
+            },
+        });
         console.error('Uncaught error:', error, errorInfo);
     }
 

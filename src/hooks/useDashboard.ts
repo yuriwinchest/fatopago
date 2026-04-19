@@ -1,20 +1,38 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useNavigate } from 'react-router-dom';
-import { UserProfile, NewsTask } from '../types';
-import { MOCK_NEWS } from '../data/mockNews';
+import { UserProfile } from '../types';
 import { fetchActivePlan, PlanPurchase } from '../lib/planService';
+import {
+    WEEKLY_CYCLE_BREAK_MS,
+    getWeeklyCycleSnapshot
+} from '../lib/cycleSchedule';
+
+type CyclePlanPurchase = Pick<
+    PlanPurchase,
+    'id' | 'plan_id' | 'status' | 'started_at' | 'completed_at' | 'used_validations' | 'max_validations' | 'validation_credit_total' | 'validation_credit_remaining'
+>;
 
 export function useDashboard() {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
     const [profile, setProfile] = useState<UserProfile | null>(null);
-    const [tasks, setTasks] = useState<NewsTask[]>([]);
     const [activePlan, setActivePlan] = useState<PlanPurchase | null>(null);
+    const [cyclePlans, setCyclePlans] = useState<CyclePlanPurchase[]>([]);
+    const [totalNewsCount, setTotalNewsCount] = useState<number>(0);
 
-    // We can expose modal state here or keep in component if it's purely UI
-    // For cleanliness, we keep modal UI state in the component, but data here usually
-    // Let's keep data logic here
+    const refreshActivePlan = async () => {
+        try {
+            const { data: { session }, error } = await supabase.auth.getSession();
+            if (error || !session?.user) return null;
+            const next = await fetchActivePlan(session.user.id);
+            setActivePlan(next);
+            return next;
+        } catch (err) {
+            console.error('Error refreshing active plan:', err);
+            return null;
+        }
+    };
 
     const loadDashboard = async () => {
         try {
@@ -27,39 +45,89 @@ export function useDashboard() {
 
             const user = session.user;
 
-            // Parallel fetching for performance
-            const [profileResult, validationsResult, tasksResult, activePlanResult] = await Promise.all([
-                supabase.from('profiles').select('*').eq('id', user.id).single(),
-                supabase.from('validations').select('task_id').eq('user_id', user.id),
-                supabase.from('news_tasks').select('*').order('created_at', { ascending: false }).limit(50),
-                fetchActivePlan(user.id)
+            const [profileResult, activePlanResult, newsCountResult] = await Promise.all([
+                supabase.from('profiles').select('*').eq('id', user.id).maybeSingle(),
+                fetchActivePlan(user.id),
+                supabase.from('news_tasks').select('id', { count: 'exact', head: true })
             ]);
 
-            setProfile(profileResult.data);
-            setActivePlan(activePlanResult);
+            setTotalNewsCount(newsCountResult.count || 0);
 
-            const validatedTaskIds = validationsResult.data?.map((v: any) => v.task_id) || [];
-            const baseTasks = (tasksResult.data || []) as NewsTask[];
+            if (profileResult.error) throw profileResult.error;
 
-            let finalTasks = baseTasks.filter((t) => !validatedTaskIds.includes(t.id));
-            if (finalTasks.length === 0) {
-                finalTasks = MOCK_NEWS;
+            const baseProfile: any = {
+                name: '',
+                lastname: '',
+                current_balance: 0,
+                compensatory_credit_balance: 0,
+                reputation_score: 0,
+                city: '',
+                state: '',
+                affiliate_code: '',
+                referral_code: '',
+                referral_active: false,
+                plan_status: 'none',
+                avatar_url: null,
+                ...(profileResult.data || {})
+            };
+
+            if (!profileResult.data) {
+                // Best-effort: create row so the UI never breaks for first-time users.
+                try {
+                    await supabase.from('profiles').upsert({ id: user.id }, { onConflict: 'id' });
+                } catch (e) {
+                    console.warn('Profile row missing and could not be created (best effort):', e);
+                }
             }
 
-            // Apply rewards policy
-            // Import dynamically to avoid circular dependency issues if any, although unlikely here
-            // But better to just use the helper we just created
-            const { getRewardByCategory } = await import('../lib/planRules');
+            setProfile({
+                ...baseProfile,
+                email: (baseProfile as any)?.email || user.email
+            });
+            setActivePlan(activePlanResult);
 
-            finalTasks = finalTasks.map(t => ({
-                ...t,
-                content: {
-                    ...t.content,
-                    reward: getRewardByCategory(t.content.category)
+            // Carrega os pacotes comprados no "ciclo atual" (inclui os 30min de intervalo antes do ciclo),
+            // para o usuário entender quantos pacotes comprou no ciclo e qual está sendo consumido agora.
+            try {
+                const localCycle = getWeeklyCycleSnapshot(new Date());
+                const cycleRes = await supabase.rpc('get_validation_cycle_meta', { p_cycle_offset: 0 });
+
+                if (cycleRes.error) {
+                    console.warn('Erro ao buscar ciclo (best effort):', cycleRes.error);
+                    setCyclePlans([]);
+                } else {
+                    const row = (Array.isArray(cycleRes.data) ? cycleRes.data[0] : cycleRes.data) as
+                        | { cycle_start_at?: string | null; cycle_end_at?: string | null; is_active?: boolean | null }
+                        | null;
+
+                    const currentCycleStartAt = new Date(row?.cycle_start_at || localCycle.cycleStartAt);
+                    const currentCycleEndAt = new Date(row?.cycle_end_at || localCycle.cycleEndAt);
+                    const effectiveStartAt =
+                        localCycle.isBreak
+                            ? new Date(currentCycleEndAt.getTime() + WEEKLY_CYCLE_BREAK_MS)
+                            : currentCycleStartAt;
+                    const effectiveEndAt = new Date(effectiveStartAt.getTime() + localCycle.durationMs);
+                    const windowStartAt = new Date(effectiveStartAt.getTime() - WEEKLY_CYCLE_BREAK_MS);
+
+                    const plansRes = await supabase
+                        .from('plan_purchases')
+                        .select('id, plan_id, status, started_at, completed_at, used_validations, max_validations, validation_credit_total, validation_credit_remaining')
+                        .eq('user_id', user.id)
+                        .gte('started_at', windowStartAt.toISOString())
+                        .lt('started_at', effectiveEndAt.toISOString())
+                        .order('started_at', { ascending: true });
+
+                    if (plansRes.error) {
+                        console.warn('Erro ao buscar pacotes do ciclo (best effort):', plansRes.error);
+                        setCyclePlans([]);
+                    } else {
+                        setCyclePlans((plansRes.data || []) as any);
+                    }
                 }
-            }));
-
-            setTasks(finalTasks);
+            } catch (e) {
+                console.warn('Falha ao carregar pacotes do ciclo (best effort):', e);
+                setCyclePlans([]);
+            }
         } catch (error) {
             console.error('Error loading dashboard:', error);
         } finally {
@@ -73,9 +141,10 @@ export function useDashboard() {
 
     return {
         profile,
-        tasks,
-        setTasks,
         loading,
-        activePlan
+        activePlan,
+        cyclePlans,
+        totalNewsCount,
+        refreshActivePlan
     };
 }

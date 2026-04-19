@@ -9,9 +9,14 @@ vi.mock('../../lib/supabase', () => {
     const mockQuery = {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
+        in: vi.fn().mockReturnThis(),
         gte: vi.fn().mockReturnThis(),
         order: vi.fn().mockReturnThis(),
         limit: vi.fn().mockReturnThis(),
+        maybeSingle: vi.fn().mockImplementation(() => Promise.resolve({
+            data: { current_balance: 0, compensatory_credit_balance: 0 },
+            error: null
+        })),
         single: vi.fn().mockImplementation(() => Promise.resolve({
             data: {
                 id: 'task-123',
@@ -35,9 +40,16 @@ vi.mock('../../lib/supabase', () => {
         supabase: {
             rpc: vi.fn(),
             auth: {
-                getSession: vi.fn(() => Promise.resolve({ data: { session: { user: { id: 'test-user' } } }, error: null }))
+                getSession: vi.fn(() => Promise.resolve({ data: { session: { user: { id: 'test-user' } } }, error: null })),
+                getUser: vi.fn(() => Promise.resolve({ data: { user: { id: 'test-user' } }, error: null }))
             },
-            from: vi.fn(() => mockQuery)
+            from: vi.fn(() => mockQuery),
+            storage: {
+                from: vi.fn(() => ({
+                    upload: vi.fn(() => Promise.resolve({ data: { path: 'test-user/proof.png' }, error: null })),
+                    getPublicUrl: vi.fn(() => ({ data: { publicUrl: 'https://cdn.test/proof.png' } }))
+                }))
+            }
         }
     };
 });
@@ -65,6 +77,30 @@ const renderPage = () => {
 describe('ValidationTask', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        vi.mocked(supabase.rpc).mockImplementation(async (fn: string) => {
+            if (fn === 'submit_validation') {
+                return { data: { status: 'success' }, error: null } as any;
+            }
+
+            if (fn === 'get_validation_cycle_meta') {
+                return {
+                    data: {
+                        cycleStartAt: '2026-04-05T15:00:00.000Z',
+                        cycleEndAt: '2026-04-12T14:00:00.000Z',
+                        nextCycleStartAt: '2026-04-12T15:00:00.000Z',
+                        timeRemaining: 256139422,
+                        currentCycleNumber: 1
+                    },
+                    error: null
+                } as any;
+            }
+
+            if (fn === 'is_admin_user') {
+                return { data: false, error: null } as any;
+            }
+
+            return { data: null, error: null } as any;
+        });
     });
 
     it('renders task details correctly', async () => {
@@ -72,37 +108,59 @@ describe('ValidationTask', () => {
 
         await waitFor(() => {
             expect(screen.getByText('Test News Title')).toBeInTheDocument();
-            expect(screen.getByText('Fonte: Test Source')).toBeInTheDocument();
+            expect(screen.getByText('É FATO')).toBeInTheDocument();
         });
     });
 
-    it('shows justification flow when clicking FALSO / FAKE', async () => {
+    it('shows false flow when clicking É FAKE', async () => {
         renderPage();
 
-        const falsoBtn = await screen.findByText('FALSO / FAKE');
+        const falsoBtn = await screen.findByText('É FAKE');
         fireEvent.click(falsoBtn);
 
         expect(screen.getByText(/identificou esta notícia como/i)).toBeInTheDocument();
         expect(screen.getByPlaceholderText(/Explique por que esta notícia é falsa/i)).toBeInTheDocument();
     });
 
-    it('calls RPC with justification when confirming FALSO', async () => {
-        const rpcMock = vi.mocked(supabase.rpc).mockResolvedValue({ data: { status: 'success' }, error: null });
+    it('bloqueia falso sem prova completa', async () => {
         renderPage();
 
-        const falsoBtn = await screen.findByText('FALSO / FAKE');
+        const falsoBtn = await screen.findByText('É FAKE');
         fireEvent.click(falsoBtn);
+        fireEvent.click(screen.getByText('CONFIRMAR'));
 
-        const textarea = screen.getByPlaceholderText(/Explique por que esta notícia é falsa/i);
-        fireEvent.change(textarea, { target: { value: 'Esta notícia é claramente falsa porque...' } });
+        await waitFor(() => {
+            expect(screen.getByText(/justificativa com pelo menos/i)).toBeInTheDocument();
+        });
 
-        const confirmBtn = screen.getByText('CONFIRMAR');
-        fireEvent.click(confirmBtn);
+        expect(vi.mocked(supabase.rpc)).not.toHaveBeenCalledWith('submit_validation', expect.anything());
+    });
+
+    it('envia falso com justificativa, link e foto', async () => {
+        const rpcMock = vi.mocked(supabase.rpc);
+        renderPage();
+
+        const falsoBtn = await screen.findByText('É FAKE');
+        fireEvent.click(falsoBtn);
+        fireEvent.change(screen.getByPlaceholderText(/Explique por que esta notícia é falsa/i), {
+            target: { value: 'A notícia foi desmentida por documento oficial.' }
+        });
+        fireEvent.change(screen.getByPlaceholderText(/https:\/\/fonte-confiavel.com/i), {
+            target: { value: 'fonte-oficial.com/prova' }
+        });
+        fireEvent.change(screen.getByLabelText(/Foto da evidência/i), {
+            target: {
+                files: [new File(['proof'], 'evidencia.png', { type: 'image/png' })]
+            }
+        });
+        fireEvent.click(screen.getByText('CONFIRMAR'));
 
         await waitFor(() => {
             expect(rpcMock).toHaveBeenCalledWith('submit_validation', expect.objectContaining({
                 p_verdict: false,
-                p_justification: 'Esta notícia é claramente falsa porque...'
+                p_justification: 'A notícia foi desmentida por documento oficial.',
+                p_proof_link: 'https://fonte-oficial.com/prova',
+                p_proof_image_url: 'https://cdn.test/proof.png'
             }));
         });
     });

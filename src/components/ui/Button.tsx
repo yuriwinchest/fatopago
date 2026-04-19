@@ -21,13 +21,18 @@ export const Button: React.FC<ButtonProps> = ({
     disabled,
     ...props
 }) => {
-    const baseStyles = "font-bold py-4 rounded-xl transition-all flex items-center justify-center gap-2 outline-none focus:ring-2 disabled:cursor-not-allowed disabled:opacity-70 group";
+    const baseStyles =
+        "group inline-flex min-h-[var(--platform-touch-target)] items-center justify-center gap-2 rounded-[var(--radius)] px-5 py-3.5 font-bold transition-all duration-200 ease-out outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-2 focus-visible:ring-offset-[hsl(var(--background))] disabled:cursor-not-allowed disabled:opacity-65";
 
     const variants = {
-        primary: "bg-[#B084FF] hover:bg-[#9D5CFF] text-[#2c1a59] hover:text-white shadow-lg shadow-[#9D5CFF]/20 focus:ring-[#9D5CFF]",
-        secondary: "bg-white/10 hover:bg-white/20 text-white border border-white/5 focus:ring-purple-500",
-        ghost: "hover:bg-white/5 text-slate-300 hover:text-white focus:ring-purple-500",
-        link: "text-[#B084FF] hover:underline p-0 h-auto font-bold"
+        primary:
+            "bg-[hsl(var(--primary))] text-white shadow-[var(--platform-surface-shadow)] hover:brightness-110 active:translate-y-[1px]",
+        secondary:
+            "border border-[hsl(var(--border))] bg-white/10 text-white hover:bg-white/15 active:translate-y-[1px]",
+        ghost:
+            "text-slate-300 hover:bg-white/5 hover:text-white active:translate-y-[1px]",
+        link:
+            "min-h-0 rounded-none px-0 py-0 text-[hsl(var(--primary))] shadow-none hover:underline"
     };
 
     return (

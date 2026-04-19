@@ -1,159 +1,161 @@
-import { ArrowRight, CheckCircle, Clock, Package, PlusCircle, RefreshCw, HelpCircle, Newspaper } from 'lucide-react';
+import {
+    ArrowRight,
+    CheckCircle,
+    Clock,
+    HelpCircle,
+    Newspaper,
+    Package,
+    PlusCircle,
+    RefreshCw
+} from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 
 const HowItWorks = () => {
     const navigate = useNavigate();
 
+    const summaryItems = [
+        { icon: <RefreshCw className="h-5 w-5 text-purple-400" />, text: 'Ciclo semanal: domingo 12h até domingo 11h' },
+        { icon: <Package className="h-5 w-5 text-blue-400" />, text: 'Cada pacote libera um total fixo de notícias' },
+        { icon: <Newspaper className="h-5 w-5 text-green-400" />, text: 'Cada notícia validada consome 1 unidade do pacote' },
+        { icon: <PlusCircle className="h-5 w-5 text-pink-400" />, text: 'Você pode comprar outro pacote quando as notícias acabarem' },
+        { icon: <RefreshCw className="h-5 w-5 text-amber-400" />, text: 'Entre 11h e 12h existe a janela de reinício do ciclo' }
+    ];
+
     return (
-        <div className="min-h-screen bg-[#0F0529] text-white font-sans selection:bg-purple-500/30">
-            {/* Header */}
-            <header className="fixed w-full z-50 bg-[#2e0259]/90 backdrop-blur-md rounded-b-[40px] shadow-2xl p-6 lg:px-16 flex justify-between items-center border-b border-white/10">
-                <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/')}>
-                    <img src="/logo.png" alt="Logo" className="h-8 lg:h-10" />
-                </div>
-                <nav className="hidden md:flex gap-8 text-sm font-bold text-slate-300">
-                    <Link to="/" className="hover:text-white transition-colors">Início</Link>
-                    <Link to="/how-it-works" className="text-purple-400">Como Funciona</Link>
-                    <Link to="/noticias-falsas" className="hover:text-white transition-colors">Notícias Falsas</Link>
-                </nav>
-                <div className="flex gap-4">
-                    <Link to="/login" className="hidden sm:flex items-center text-sm font-bold text-slate-300 hover:text-white px-4">
-                        Login
-                    </Link>
-                    <Link to="/register" className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white px-6 py-2.5 rounded-xl font-bold text-sm transition-all shadow-lg hover:shadow-purple-500/20">
-                        Começar Agora
-                    </Link>
-                </div>
-            </header>
+        <div className="min-h-screen bg-[#0F0529] font-sans text-white selection:bg-purple-500/30">
+            <header className="sticky top-0 z-40 border-b border-white/10 bg-[#1b0837]/85 backdrop-blur-md">
+                <div className="mx-auto flex w-full max-w-[1200px] items-center justify-between px-6 py-4 lg:px-10">
+                    <button className="flex items-center gap-3" onClick={() => navigate('/')} aria-label="Ir para início">
+                        <img src="/logo.png" alt="FatoPago" className="h-8 w-auto" />
+                    </button>
 
-            {/* Hero Section */}
-            <section className="pt-40 pb-20 px-6 lg:px-16 text-center max-w-5xl mx-auto">
-                <div className="inline-flex items-center gap-2 bg-purple-500/10 border border-purple-500/20 px-4 py-2 rounded-full mb-6">
-                    <HelpCircle className="w-4 h-4 text-purple-400" />
-                    <span className="text-xs font-bold text-purple-200 uppercase tracking-widest">Guia Completo</span>
-                </div>
-                <h1 className="text-4xl lg:text-7xl font-black mb-6 leading-tight tracking-tight">
-                    O que é o <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">Ciclo</span> no Fatopago?
-                </h1>
-                <p className="text-lg md:text-xl text-slate-400 mb-12 max-w-3xl mx-auto leading-relaxed font-medium">
-                    Ciclo é o período de tempo em que o seu pacote fica ativo para validação de notícias. Entenda cada detalhe de como funciona.
-                </p>
+                    <nav className="hidden items-center gap-8 text-sm font-bold text-slate-300 md:flex">
+                        <Link to="/" className="transition-colors hover:text-white">Início</Link>
+                        <Link to="/how-it-works" className="text-purple-300">Como funciona</Link>
+                        <Link to="/noticias-falsas" className="transition-colors hover:text-white">Notícias falsas</Link>
+                    </nav>
 
-                <div className="bg-[#1A1040]/40 border border-white/10 p-8 rounded-[40px] text-left relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-purple-600/5 blur-[80px] rounded-full" />
-                    <div className="relative z-10 flex flex-col md:flex-row items-center gap-8">
-                        <div className="w-20 h-20 bg-purple-600/20 rounded-3xl flex items-center justify-center border border-purple-500/30 flex-shrink-0">
-                            <Clock className="w-10 h-10 text-purple-400" />
-                        </div>
-                        <div>
-                            <h3 className="text-2xl font-bold mb-2 text-white">⏱ Duração do Ciclo</h3>
-                            <p className="text-slate-300 text-lg leading-relaxed">
-                                Cada ciclo tem duração de <span className="text-white font-bold">24 horas</span>. Durante esse período, você pode usar o saldo do seu pacote para validar notícias e gerar seus ganhos.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            {/* Detailed sections */}
-            <section className="py-20 bg-white/[0.02] border-y border-white/5">
-                <div className="px-6 lg:px-16 max-w-6xl mx-auto grid md:grid-cols-2 gap-8">
-                    {/* Compra de pacotes */}
-                    <div className="bg-[#1A1040]/30 border border-white/5 p-8 rounded-[32px] hover:border-purple-500/30 transition-all">
-                        <div className="w-12 h-12 bg-blue-500/10 rounded-2xl flex items-center justify-center mb-6">
-                            <PlusCircle className="w-6 h-6 text-blue-400" />
-                        </div>
-                        <h3 className="text-xl font-bold mb-4 text-white">Compra de pacotes durante o ciclo</h3>
-                        <p className="text-slate-400 leading-relaxed mb-4">
-                            Durante o ciclo do Fatopago, você pode comprar quantos pacotes quiser.
-                        </p>
-                        <div className="bg-blue-500/5 border border-blue-500/10 p-4 rounded-2xl">
-                            <p className="text-blue-300 text-sm font-bold flex items-center gap-2">
-                                <ArrowRight className="w-4 h-4" />
-                                Os valores adquiridos se somam, aumentando o seu saldo disponível.
-                            </p>
-                        </div>
-                    </div>
-
-                    {/* Funcionamento do saldo */}
-                    <div className="bg-[#1A1040]/30 border border-white/5 p-8 rounded-[32px] hover:border-purple-500/30 transition-all">
-                        <div className="w-12 h-12 bg-green-500/10 rounded-2xl flex items-center justify-center mb-6">
-                            <Package className="w-6 h-6 text-green-400" />
-                        </div>
-                        <h3 className="text-xl font-bold mb-4 text-white">Como funciona o saldo do pacote?</h3>
-                        <ul className="space-y-3 text-slate-400 text-sm">
-                            <li className="flex items-start gap-3">
-                                <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-                                <span>O valor do pacote se transforma em <span className="text-white font-bold">saldo para validação</span>.</span>
-                            </li>
-                            <li className="flex items-start gap-3">
-                                <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-                                <span>Cada notícia possui um valor (custo).</span>
-                            </li>
-                            <li className="flex items-start gap-3">
-                                <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-                                <span>A cada notícia validada, esse valor é debitado automaticamente do seu saldo.</span>
-                            </li>
-                            <li className="flex items-start gap-3">
-                                <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-                                <span>Você pode validar notícias enquanto houver saldo e o ciclo estiver ativo.</span>
-                            </li>
-                        </ul>
-                    </div>
-                </div>
-            </section>
-
-            {/* Proximo ciclo */}
-            <section className="py-24 px-6 relative">
-                <div className="max-w-4xl mx-auto">
-                    <div className="bg-gradient-to-br from-[#2E0259] to-[#0F0529] border-2 border-purple-500/30 rounded-[40px] p-8 md:p-12 shadow-2xl relative overflow-hidden text-center">
-                        <div className="absolute -top-10 -right-10 w-40 h-40 bg-purple-600/10 rounded-full blur-3xl" />
-                        <div className="w-16 h-16 bg-purple-600/20 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-purple-500/30">
-                            <RefreshCw className="w-8 h-8 text-purple-400" />
-                        </div>
-                        <h2 className="text-2xl md:text-4xl font-black mb-6">Saldo para ativar o próximo ciclo</h2>
-                        <p className="text-slate-300 text-lg leading-relaxed mb-8">
-                            🔁 Você pode manter um saldo correspondente ao valor de um pacote para ativar automaticamente o próximo ciclo.
-                        </p>
-                        <div className="bg-black/40 rounded-3xl p-6 border border-white/5 text-left">
-                            <p className="text-purple-200 font-bold mb-2 uppercase tracking-widest text-xs">Como funciona:</p>
-                            <p className="text-slate-400">
-                                Se ao final do ciclo você tiver saldo suficiente equivalente a um pacote, esse saldo será utilizado para <span className="text-white font-bold">iniciar o ciclo seguinte</span>, sem necessidade de nova compra imediata.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            {/* Quick Summary */}
-            <section className="py-20 px-6">
-                <div className="max-w-3xl mx-auto">
-                    <h3 className="text-3xl font-black mb-10 text-center">Resumo rápido</h3>
-                    <div className="grid gap-4">
-                        {[
-                            { icon: <RefreshCw className="w-5 h-5 text-purple-400" />, text: "🔄 Ciclo: dura 24 horas" },
-                            { icon: <Package className="w-5 h-5 text-blue-400" />, text: "📦 Pacote: vira saldo para validação" },
-                            { icon: <Newspaper className="w-5 h-5 text-green-400" />, text: "📰 Cada notícia: consome parte do saldo" },
-                            { icon: <PlusCircle className="w-5 h-5 text-pink-400" />, text: "➕ Pode comprar vários pacotes no mesmo ciclo" },
-                            { icon: <RefreshCw className="w-5 h-5 text-amber-400" />, text: "🔁 Saldo pode ativar o próximo ciclo automaticamente" },
-                        ].map((item, i) => (
-                            <div key={i} className="flex items-center gap-4 bg-[#1A1040]/20 border border-white/5 p-5 rounded-2xl">
-                                {item.icon}
-                                <span className="font-bold text-slate-200">{item.text}</span>
-                            </div>
-                        ))}
-                    </div>
-
-                    <div className="mt-16 text-center">
-                        <Link to="/register" className="inline-flex items-center gap-3 bg-white text-[#0F0529] px-10 py-5 rounded-2xl font-black text-lg hover:bg-purple-50 transition-all hover:scale-105 active:scale-95 shadow-2xl">
-                            COMEÇAR AGORA <ArrowRight className="w-6 h-6" />
+                    <div className="flex items-center gap-3">
+                        <Link to="/login" className="hidden text-sm font-bold text-slate-300 transition-colors hover:text-white sm:inline-flex">
+                            Login
+                        </Link>
+                        <Link
+                            to="/register"
+                            className="rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 px-5 py-2.5 text-sm font-bold text-white transition-all hover:from-purple-500 hover:to-indigo-500"
+                        >
+                            Começar
                         </Link>
                     </div>
                 </div>
-            </section>
+            </header>
 
-            {/* Footer */}
-            <footer className="py-12 border-t border-white/5 text-center text-slate-600 text-sm">
+            <main className="mx-auto w-full max-w-[1200px] space-y-20 px-6 py-14 lg:px-10">
+                <section className="text-center">
+                    <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-purple-500/20 bg-purple-500/10 px-4 py-2">
+                        <HelpCircle className="h-4 w-4 text-purple-300" />
+                        <span className="text-xs font-bold uppercase tracking-widest text-purple-200">Guia completo</span>
+                    </div>
+                    <h1 className="mx-auto max-w-4xl text-4xl font-black leading-tight md:text-6xl">
+                        O que é o <span className="bg-gradient-to-r from-purple-300 to-pink-400 bg-clip-text text-transparent">Ciclo</span> no FatoPago?
+                    </h1>
+                    <p className="mx-auto mt-6 max-w-3xl text-lg leading-relaxed text-slate-400">
+                        Ciclo é o período em que seu pacote fica ativo para validação de notícias. Veja como funciona, da liberação das notícias até a renovação automática.
+                    </p>
+                </section>
+
+                <section>
+                    <div className="rounded-[32px] border border-white/10 bg-[#1A1040]/40 p-6 md:p-8">
+                        <div className="flex flex-col items-start gap-6 md:flex-row md:items-center">
+                            <div className="flex h-20 w-20 items-center justify-center rounded-3xl border border-purple-500/30 bg-purple-600/20">
+                                <Clock className="h-10 w-10 text-purple-300" />
+                            </div>
+                            <div>
+                                <h2 className="text-2xl font-black text-white md:text-3xl">Duração do ciclo: semanal</h2>
+                                <p className="mt-2 text-base leading-relaxed text-slate-300">
+                                    O ciclo começa todo domingo ao meio-dia e encerra no domingo seguinte, às 11h da manhã. Depois disso, a plataforma reinicia a janela semanal e prepara o próximo ranking.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                    <article className="rounded-[28px] border border-white/10 bg-[#1A1040]/30 p-7">
+                        <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-500/10">
+                            <PlusCircle className="h-6 w-6 text-blue-400" />
+                        </div>
+                        <h3 className="mb-3 text-xl font-bold text-white">Compra de pacotes no ciclo</h3>
+                        <p className="mb-4 text-sm leading-relaxed text-slate-400">
+                            Você pode comprar outro pacote no mesmo ciclo, mas apenas quando finalizar o pacote atual.
+                        </p>
+                        <div className="rounded-2xl border border-blue-500/20 bg-blue-500/5 p-4">
+                            <p className="flex items-center gap-2 text-sm font-bold text-blue-300">
+                                <ArrowRight className="h-4 w-4" />
+                                Regra: 1 pacote ativo por vez. Ao terminar, você libera a compra do próximo.
+                            </p>
+                        </div>
+                    </article>
+
+                    <article className="rounded-[28px] border border-white/10 bg-[#1A1040]/30 p-7">
+                        <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-green-500/10">
+                            <Package className="h-6 w-6 text-green-400" />
+                        </div>
+                        <h3 className="mb-4 text-xl font-bold text-white">Como o pacote funciona</h3>
+                        <ul className="space-y-3 text-sm text-slate-400">
+                            <li className="flex gap-3">
+                                <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-green-500" />
+                                <span>Cada pacote libera um total fixo de notícias para validar.</span>
+                            </li>
+                            <li className="flex gap-3">
+                                <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-green-500" />
+                                <span>Cada notícia validada consome 1 unidade do pacote.</span>
+                            </li>
+                            <li className="flex gap-3">
+                                <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-green-500" />
+                                <span>A contagem é debitada automaticamente a cada validação.</span>
+                            </li>
+                            <li className="flex gap-3">
+                                <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-green-500" />
+                                <span>Você valida enquanto houver notícias disponíveis e ciclo ativo.</span>
+                            </li>
+                        </ul>
+                    </article>
+                </section>
+
+                <section>
+                    <div className="rounded-[32px] border border-purple-500/30 bg-gradient-to-br from-[#2E0259] to-[#0F0529] p-8 text-center md:p-12">
+                        <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-purple-500/30 bg-purple-600/20">
+                            <RefreshCw className="h-8 w-8 text-purple-300" />
+                        </div>
+                        <h2 className="text-2xl font-black md:text-4xl">Pacotes no próximo ciclo</h2>
+                        <p className="mx-auto mt-4 max-w-2xl text-slate-300">
+                            Se as notícias do pacote acabarem, você pode comprar outro pacote dentro da validade liberada para o seu perfil.
+                        </p>
+                    </div>
+                </section>
+
+                <section className="mx-auto max-w-3xl">
+                    <h3 className="mb-8 text-center text-3xl font-black">Resumo rápido</h3>
+                    <div className="space-y-3">
+                        {summaryItems.map((item, idx) => (
+                            <div key={idx} className="flex items-center gap-4 rounded-2xl border border-white/10 bg-[#1A1040]/25 p-4">
+                                {item.icon}
+                                <span className="text-sm font-bold text-slate-200">{item.text}</span>
+                            </div>
+                        ))}
+                    </div>
+                    <div className="mt-12 text-center">
+                        <Link
+                            to="/register"
+                            className="inline-flex items-center gap-3 rounded-2xl bg-white px-9 py-4 text-lg font-black text-[#0F0529] transition-all hover:scale-[1.02]"
+                        >
+                            COMEÇAR AGORA <ArrowRight className="h-6 w-6" />
+                        </Link>
+                    </div>
+                </section>
+            </main>
+
+            <footer className="border-t border-white/5 py-10 text-center text-sm text-slate-600">
                 <p>&copy; 2026 FatoPago. Todos os direitos reservados.</p>
             </footer>
         </div>

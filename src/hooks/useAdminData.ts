@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 import { useNavigate } from 'react-router-dom';
-import { resolveIsAdminUser } from '../lib/authRouting';
+import { resolveIsAdminUser, resolveIsCollaboratorUser } from '../lib/authRouting';
 import {
     buildWinnerFollowupDraftMap,
     buildWinnerFollowupHistoryMap,
@@ -15,6 +15,8 @@ import {
     WinnerFollowupSort
 } from '../lib/winnerFollowups';
 import { readSupabaseFunctionErrorMessage } from '../lib/supabaseFunctionErrors';
+import { ManualReviewTaskRow, ManualReviewVoteRow } from '../lib/newsTaskManualReview';
+import { getWeeklyCycleSnapshot } from '../lib/cycleSchedule';
 
 export interface ExtendedAdminUser {
     id: string;
@@ -36,6 +38,27 @@ export interface ExtendedAdminUser {
     current_balance: number;
     total_loaded: number;
     total_spent: number;
+    last_validation_at?: string | null;
+}
+
+export interface UserPurchase {
+    id: string;
+    amount: number;
+    status: string;
+    created_at: string;
+    plan_activated_at: string | null;
+    plan_id: string;
+    mp_payment_id: string | null;
+    cycle_number?: number;
+}
+
+export interface UserTransaction {
+    id: string;
+    amount: number;
+    type: 'credit' | 'debit';
+    status: string;
+    description: string;
+    created_at: string;
 }
 
 export type CycleMetaRow = {
@@ -72,6 +95,10 @@ export type CycleBundle = {
     leadsNotPaid: any[];
     pendingPix: any[];
     pendingPixUserIds: Set<string>;
+    sellerReferrals: any[];
+    sellerFunnelEvents: any[];
+    sellerCommissionCredits: any[];
+    sellerDirectory: any[];
 };
 
 export type CycleWinnerRow = {
@@ -110,10 +137,64 @@ export type AdminNewsItem = {
     cycle_start_at: string | null;
     admin_priority: number | null;
     title: string;
+    description?: string | null;
+    full_text?: string | null;
     category: string;
     source: string;
     image_url: string | null;
     link: string | null;
+};
+
+export type SecurityAlertSeverity = 'critical' | 'high' | 'medium' | 'low';
+
+export type SecurityAlertRow = {
+    id: number;
+    event_key: string;
+    source: string;
+    category: string;
+    severity: SecurityAlertSeverity;
+    title: string;
+    message: string;
+    metadata: Record<string, unknown> | null;
+    occurrence_count: number;
+    first_seen_at: string;
+    last_seen_at: string;
+    acknowledged_at: string | null;
+    acknowledged_by: string | null;
+    resolved_at: string | null;
+};
+
+export type AdminPixWithdrawalStatus =
+    | 'pending'
+    | 'pending_manual_review'
+    | 'processing'
+    | 'completed'
+    | 'failed'
+    | 'cancelled';
+
+export type AdminPixWithdrawalRow = {
+    id: string;
+    user_id: string;
+    user_name: string;
+    user_lastname: string | null;
+    user_email: string;
+    amount: number;
+    pix_key_masked: string;
+    pix_key_type: string;
+    status: AdminPixWithdrawalStatus;
+    manual_review_required: boolean;
+    review_reason: string | null;
+    payout_attempts: number;
+    external_payout_id: string | null;
+    external_status: string | null;
+    failed_reason: string | null;
+    transaction_status: string | null;
+    created_at: string;
+    updated_at: string;
+    processing_started_at: string | null;
+    completed_at: string | null;
+    failed_at: string | null;
+    reviewed_at: string | null;
 };
 
 const APPROVED_PAYMENT_STATUSES = new Set(['approved', 'paid', 'completed', 'authorized', 'active']);
@@ -123,19 +204,25 @@ export const useAdminData = (activeTab: string) => {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
     const [isAdmin, setIsAdmin] = useState(false);
+    const [isCollaborator, setIsCollaborator] = useState(false);
 
     // Métrica Totais
     const [totals, setTotals] = useState({
         total_users: 0,
         total_referrals: 0,
-        total_commissions: 0
+        total_commissions: 0,
+        cycle_revenue: 0,
+        month_revenue: 0
     });
 
     // Usuários
     const [users, setUsers] = useState<ExtendedAdminUser[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
+    const [registrationDateFilter, setRegistrationDateFilter] = useState(''); // YYYY-MM-DD
     const [currentUsersPage, setCurrentUsersPage] = useState(1);
     const [selectedUser, setSelectedUser] = useState<ExtendedAdminUser | null>(null);
+    const [userHistory, setUserHistory] = useState<{ purchases: UserPurchase[], transactions: UserTransaction[] }>({ purchases: [], transactions: [] });
+    const [userHistoryLoading, setUserHistoryLoading] = useState(false);
     const [showDetailsModal, setShowDetailsModal] = useState(false);
 
     // Ciclos
@@ -173,6 +260,34 @@ export const useAdminData = (activeTab: string) => {
     const [sellersError, setSellersError] = useState<string | null>(null);
     const [isSavingSeller, setIsSavingSeller] = useState(false);
 
+    // Colaboradores
+    const [collaborators, setCollaborators] = useState<any[]>([]);
+    const [collaboratorsLoading, setCollaboratorsLoading] = useState(false);
+    const [collaboratorsError, setCollaboratorsError] = useState<string | null>(null);
+    const [isSavingCollaborator, setIsSavingCollaborator] = useState(false);
+
+    // Alertas de segurança
+    const [securityAlerts, setSecurityAlerts] = useState<SecurityAlertRow[]>([]);
+    const [securityAlertsLoading, setSecurityAlertsLoading] = useState(false);
+    const [securityAlertsError, setSecurityAlertsError] = useState<string | null>(null);
+    const [acknowledgingAlertId, setAcknowledgingAlertId] = useState<number | null>(null);
+
+    // Revisão manual de notícias
+    const [manualReviewTasks, setManualReviewTasks] = useState<ManualReviewTaskRow[]>([]);
+    const [manualReviewLoading, setManualReviewLoading] = useState(false);
+    const [manualReviewError, setManualReviewError] = useState<string | null>(null);
+    const [manualReviewVotesByTask, setManualReviewVotesByTask] = useState<Record<string, ManualReviewVoteRow[]>>({});
+    const [manualReviewVotesLoadingTaskId, setManualReviewVotesLoadingTaskId] = useState<string | null>(null);
+    const [manualReviewVotesError, setManualReviewVotesError] = useState<string | null>(null);
+    const [manualReviewSettlingTaskId, setManualReviewSettlingTaskId] = useState<string | null>(null);
+    const [manualReviewBulkLoading, setManualReviewBulkLoading] = useState(false);
+
+    // Fila administrativa de saques PIX
+    const [pixWithdrawals, setPixWithdrawals] = useState<AdminPixWithdrawalRow[]>([]);
+    const [pixWithdrawalsLoading, setPixWithdrawalsLoading] = useState(false);
+    const [pixWithdrawalsError, setPixWithdrawalsError] = useState<string | null>(null);
+    const [pixWithdrawalResolvingId, setPixWithdrawalResolvingId] = useState<string | null>(null);
+
     // Configurações da Home (Banners)
     const [homeConfig, setHomeConfig] = useState<any>(null);
     const [isSavingHomeConfig, setIsSavingHomeConfig] = useState(false);
@@ -187,34 +302,68 @@ export const useAdminData = (activeTab: string) => {
         return Number.isFinite(n) ? n : 0;
     };
 
-    const checkAdmin = async () => {
+    const checkAccess = async () => {
         const { data: { user } } = await supabase.auth.getUser();
-        const isAdmin = await resolveIsAdminUser(user?.id);
-        if (isAdmin) {
+        if (!user) {
+            navigate('/login');
+            return;
+        }
+
+        const [adminRes, collaboratorRes] = await Promise.all([
+            resolveIsAdminUser(user.id),
+            resolveIsCollaboratorUser(user.id)
+        ]);
+
+        if (adminRes) {
             setIsAdmin(true);
+        } else if (collaboratorRes) {
+            setIsCollaborator(true);
         } else {
-            if (user) {
-                navigate('/validation');
-            } else {
-                navigate('/login');
-            }
+            navigate('/validation');
         }
     };
 
     const fetchTotals = async () => {
         try {
-            const [{ count: userCount }, { count: referralCount }, { data: commissionsData }] = await Promise.all([
+            const cycleSnapshot = getWeeklyCycleSnapshot();
+            const saoPauloNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
+            const monthStartUtc = new Date(Date.UTC(saoPauloNow.getFullYear(), saoPauloNow.getMonth(), 1) - (3 * 60 * 60 * 1000)).toISOString();
+
+            const [
+                { count: userCount },
+                { count: referralCount },
+                { data: commissionsData },
+                { data: cyclePixData },
+                { data: monthPixData }
+            ] = await Promise.all([
                 supabase.from('profiles').select('*', { count: 'exact', head: true }),
                 supabase.from('referrals').select('*', { count: 'exact', head: true }),
-                supabase.from('commissions').select('amount')
+                supabase.from('commissions').select('amount'),
+                supabase.from('pix_payments')
+                    .select('amount, status')
+                    .gte('created_at', cycleSnapshot.cycleStartAt)
+                    .lt('created_at', cycleSnapshot.nextCycleStartAt),
+                supabase.from('pix_payments')
+                    .select('amount, status')
+                    .gte('created_at', monthStartUtc)
             ]);
 
             const sumCommissions = (commissionsData || []).reduce((acc: number, curr: { amount: unknown }) => acc + toNumber(curr.amount), 0);
 
+            const approvedStatuses = APPROVED_PAYMENT_STATUSES;
+            const cycleRevenue = (cyclePixData || [])
+                .filter((p: any) => approvedStatuses.has(String(p.status || '').toLowerCase()))
+                .reduce((sum: number, p: any) => sum + toNumber(p.amount), 0);
+            const monthRevenue = (monthPixData || [])
+                .filter((p: any) => approvedStatuses.has(String(p.status || '').toLowerCase()))
+                .reduce((sum: number, p: any) => sum + toNumber(p.amount), 0);
+
             setTotals({
                 total_users: toNumber(userCount),
                 total_referrals: toNumber(referralCount),
-                total_commissions: sumCommissions
+                total_commissions: sumCommissions,
+                cycle_revenue: cycleRevenue,
+                month_revenue: monthRevenue
             });
         } catch (err) {
             console.error('Erro ao buscar totais:', err);
@@ -242,11 +391,24 @@ export const useAdminData = (activeTab: string) => {
                 profilesError = fallbackProfilesRes.error;
             }
 
-            const [{ data: referrals }, { data: commissions }, { data: transactions }] = await Promise.all([
+            const [
+                { data: referrals }, 
+                { data: commissions }, 
+                { data: transactions },
+                { data: lastValidations }
+            ] = await Promise.all([
                 supabase.from('referrals').select('referrer_id, referred_id, created_at'),
                 supabase.from('commissions').select('referrer_id, amount'),
-                supabase.from('transactions').select('user_id, amount, type, status, description, created_at')
+                supabase.from('transactions').select('user_id, amount, type, status, description, created_at'),
+                supabase.rpc('get_last_validations_per_user')
             ]);
+
+            const validationsMap: Record<string, string> = {};
+            if (lastValidations) {
+                lastValidations.forEach((v: any) => {
+                    validationsMap[v.user_id] = v.last_validation_at;
+                });
+            }
 
             if (profilesError) throw profilesError;
 
@@ -271,7 +433,8 @@ export const useAdminData = (activeTab: string) => {
                 total_commission: commissionSums[p.id] || 0,
                 current_balance: toNumber(p.current_balance),
                 total_loaded: loadedSums[p.id] || 0,
-                total_spent: spentSums[p.id] || 0
+                total_spent: spentSums[p.id] || 0,
+                last_validation_at: validationsMap[p.id] || p.last_validation_at
             }));
 
             setUsers(enrichedUsers);
@@ -279,6 +442,38 @@ export const useAdminData = (activeTab: string) => {
             console.error('Erro ao buscar dados:', error);
         } finally {
             setLoading(false);
+        }
+    }, []);
+
+    const fetchUserHistory = useCallback(async (userId: string) => {
+        try {
+            setUserHistoryLoading(true);
+            const [pixRes, txRes] = await Promise.all([
+                supabase.from('pix_payments')
+                    .select('id, amount, status, created_at, plan_activated_at, plan_id, mp_payment_id')
+                    .eq('user_id', userId)
+                    .order('created_at', { ascending: false }),
+                supabase.from('transactions')
+                    .select('id, amount, type, status, description, created_at')
+                    .eq('user_id', userId)
+                    .order('created_at', { ascending: false })
+            ]);
+
+            if (pixRes.error) throw pixRes.error;
+            if (txRes.error) throw txRes.error;
+
+            // Enriquecer purchases com número do ciclo se possível
+            // Aqui poderíamos fazer uma lógica para bater a data com os ciclos, 
+            // mas por agora vamos retornar os dados brutos e formatar no UI.
+            
+            setUserHistory({
+                purchases: (pixRes.data || []) as UserPurchase[],
+                transactions: (txRes.data || []) as UserTransaction[]
+            });
+        } catch (error) {
+            console.error('Erro ao buscar histórico do usuário:', error);
+        } finally {
+            setUserHistoryLoading(false);
         }
     }, []);
 
@@ -399,12 +594,16 @@ export const useAdminData = (activeTab: string) => {
         const start = String(metaRow.cycle_start_at);
         const end = String(metaRow.cycle_end_at);
 
-        const [rankingRes, txRes, refRes, pixRes, profilesRes] = await Promise.all([
+        const [rankingRes, txRes, refRes, pixRes, profilesRes, sellerRelRes, sellerFunnelRes, sellerCommissionRes, sellerDirectoryRes] = await Promise.all([
             supabase.rpc('get_live_validation_ranking', { p_state: null, p_city: null, p_limit: 500, p_cycle_offset: offset }),
             supabase.from('transactions').select('user_id, amount, type, status, description, created_at').gte('created_at', start).lt('created_at', end),
             supabase.from('referrals').select('referrer_id, referred_id, created_at').gte('created_at', start).lt('created_at', end),
-            supabase.from('pix_payments').select('user_id, plan_id, amount, status, created_at, expires_at, plan_activated_at, mp_payment_id').gte('created_at', start).lt('created_at', end),
-            supabase.from('profiles').select('id, name, lastname, email, city, state, created_at, affiliate_code, referral_code, avatar_url').gte('created_at', start).lt('created_at', end)
+            supabase.from('pix_payments').select('user_id, seller_id, seller_referral_id, seller_source, plan_id, amount, status, created_at, expires_at, plan_activated_at, mp_payment_id').gte('created_at', start).lt('created_at', end),
+            supabase.from('profiles').select('id, name, lastname, email, city, state, created_at, affiliate_code, referral_code, avatar_url').gte('created_at', start).lt('created_at', end),
+            supabase.from('seller_referrals').select('seller_id, referred_user_id, created_at').gte('created_at', start).lt('created_at', end),
+            supabase.from('seller_funnel_events').select('seller_id, event_type, created_at, visitor_id, referred_user_id').gte('created_at', start).lt('created_at', end),
+            supabase.from('seller_commission_credits').select('seller_id, amount, created_at').gte('created_at', start).lt('created_at', end),
+            supabase.rpc('admin_list_sellers')
         ]);
 
         const ranking = (rankingRes.data || []) as any[];
@@ -412,6 +611,16 @@ export const useAdminData = (activeTab: string) => {
         const referrals = (refRes.data || []) as any[];
         const pixPayments = (pixRes.data || []) as any[];
         const profilesCreated = (profilesRes.data || []) as any[];
+        const sellerReferrals = (sellerRelRes.data || []) as any[];
+        const sellerFunnelEvents = (sellerFunnelRes.data || []) as any[];
+        const sellerCommissionCredits = (sellerCommissionRes.data || []) as any[];
+        const sellerDirectory = Array.isArray(sellerDirectoryRes.data)
+            ? (sellerDirectoryRes.data as any[]).map((seller) => ({
+                id: seller.id,
+                name: seller.name,
+                seller_code: seller.seller_code
+            }))
+            : [];
 
         const approvedPix = pixPayments.filter((payment: any) => {
             const status = String(payment?.status || '').toLowerCase();
@@ -507,7 +716,11 @@ export const useAdminData = (activeTab: string) => {
             topAffiliate: affiliates[0] || null,
             leadsNotPaid,
             pendingPix,
-            pendingPixUserIds
+            pendingPixUserIds,
+            sellerReferrals,
+            sellerFunnelEvents,
+            sellerCommissionCredits,
+            sellerDirectory
         };
     }, [users]);
 
@@ -528,16 +741,14 @@ export const useAdminData = (activeTab: string) => {
     const fetchAdminNewsFeed = useCallback(async () => {
         try {
             setAdminNewsLoading(true);
-            const [currentRes, previousRes, currentMetaRes, previousMetaRes] = await Promise.all([
+            const [newsRes, currentMetaRes] = await Promise.all([
                 supabase.rpc('admin_list_news_by_cycle', { p_cycle_offset: 0 }),
-                supabase.rpc('admin_list_news_by_cycle', { p_cycle_offset: 1 }),
-                supabase.rpc('get_validation_cycle_meta', { p_cycle_offset: 0 }),
-                supabase.rpc('get_validation_cycle_meta', { p_cycle_offset: 1 })
+                supabase.rpc('get_validation_cycle_meta', { p_cycle_offset: 0 })
             ]);
-            setAdminNewsItems((currentRes.data || []) as AdminNewsItem[]);
-            setPreviousAdminNewsItems((previousRes.data || []) as AdminNewsItem[]);
+            setAdminNewsItems((newsRes.data || []) as AdminNewsItem[]);
+            setPreviousAdminNewsItems([]);
             setCurrentNewsCycle(((Array.isArray(currentMetaRes.data) ? currentMetaRes.data[0] : currentMetaRes.data) || null) as CycleMetaRow | null);
-            setPreviousNewsCycle(((Array.isArray(previousMetaRes.data) ? previousMetaRes.data[0] : previousMetaRes.data) || null) as CycleMetaRow | null);
+            setPreviousNewsCycle(null);
         } catch (e: any) {
             setNewsMessage('Falha ao carregar notícias.');
         } finally {
@@ -557,12 +768,62 @@ export const useAdminData = (activeTab: string) => {
                 const { data: { publicUrl } } = supabase.storage.from('news-images').getPublicUrl(uploadData.path);
                 finalImageUrl = publicUrl;
             }
-            const { error } = await supabase.from('news_manually').insert([{ ...formData, image_url: finalImageUrl }]);
+
+            const { error } = await supabase.rpc('admin_create_news_task', {
+                p_title: formData.title,
+                p_description: formData.description,
+                p_full_text: formData.full_text || null,
+                p_source: formData.source,
+                p_category: formData.category,
+                p_link: formData.link || null,
+                p_image_url: finalImageUrl || null,
+                p_priority: formData.admin_priority
+            });
+
             if (error) throw error;
             setNewsMessage('Notícia publicada com sucesso!');
             await fetchAdminNewsFeed();
+            return true;
         } catch (err: any) {
             setNewsMessage('Erro ao publicar: ' + err.message);
+            return false;
+        } finally {
+            setNewsPublishing(false);
+        }
+    };
+
+    const handleUpdateNews = async (id: string, formData: any, imageFile: File | null) => {
+        setNewsPublishing(true);
+        setNewsMessage(null);
+        try {
+            let finalImageUrl = formData.image_url;
+            if (imageFile) {
+                const fileName = `${Date.now()}-${imageFile.name}`;
+                const { data: uploadData, error: uploadError } = await supabase.storage.from('news-images').upload(fileName, imageFile);
+                if (uploadError) throw uploadError;
+                const { data: { publicUrl } } = supabase.storage.from('news-images').getPublicUrl(uploadData.path);
+                finalImageUrl = publicUrl;
+            }
+
+            const { error } = await supabase.rpc('admin_update_news_task', {
+                p_task_id: id,
+                p_title: formData.title,
+                p_description: formData.description || null,
+                p_full_text: formData.full_text || null,
+                p_source: formData.source,
+                p_category: formData.category,
+                p_link: formData.link || null,
+                p_image_url: finalImageUrl || null,
+                p_priority: formData.admin_priority
+            });
+
+            if (error) throw error;
+            setNewsMessage('Notícia atualizada com sucesso!');
+            await fetchAdminNewsFeed();
+            return true;
+        } catch (err: any) {
+            setNewsMessage('Erro ao atualizar: ' + err.message);
+            return false;
         } finally {
             setNewsPublishing(false);
         }
@@ -570,7 +831,9 @@ export const useAdminData = (activeTab: string) => {
 
     const handleDeleteNews = async (id: string) => {
         try {
-            const { error } = await supabase.from('news_manually').delete().eq('id', id);
+            const { error } = await supabase.rpc('admin_delete_news_task', {
+                p_task_id: id
+            });
             if (error) throw error;
             await fetchAdminNewsFeed();
         } catch (err: any) {
@@ -581,15 +844,10 @@ export const useAdminData = (activeTab: string) => {
     const handleRestoreNews = async (id: string, item: AdminNewsItem) => {
         setRestoringNewsId(id);
         try {
-            const { error } = await supabase.from('news_manually').insert([{
-                title: item.title,
-                category: item.category,
-                source: item.source,
-                image_url: item.image_url,
-                link: item.link,
-                admin_priority: item.admin_priority,
-                cycle_number: currentNewsCycle?.cycle_number
-            }]);
+            const { error } = await supabase.rpc('admin_restore_news_task', {
+                p_task_id: id,
+                p_priority: item.admin_priority ?? null
+            });
             if (error) throw error;
             await fetchAdminNewsFeed();
         } catch (err: any) {
@@ -613,6 +871,481 @@ export const useAdminData = (activeTab: string) => {
             setSellersLoading(false);
         }
     };
+
+    const fetchSecurityAlerts = useCallback(async (options?: { silent?: boolean }) => {
+        const silent = options?.silent === true;
+
+        if (!silent) {
+            setSecurityAlertsLoading(true);
+        }
+        setSecurityAlertsError(null);
+
+        try {
+            const { data, error } = await supabase.rpc('admin_list_security_alerts', {
+                p_limit: 80,
+                p_include_acknowledged: true
+            });
+
+            if (error) throw error;
+            setSecurityAlerts(Array.isArray(data) ? (data as SecurityAlertRow[]) : []);
+        } catch (err: any) {
+            const message = err?.message || 'Não foi possível carregar os alertas de segurança.';
+            setSecurityAlertsError(message);
+            if (!silent) {
+                setSecurityAlerts([]);
+            }
+        } finally {
+            if (!silent) {
+                setSecurityAlertsLoading(false);
+            }
+        }
+    }, []);
+
+    const acknowledgeSecurityAlert = useCallback(async (alertId: number) => {
+        setAcknowledgingAlertId(alertId);
+        setSecurityAlertsError(null);
+
+        try {
+            const { error } = await supabase.rpc('admin_acknowledge_security_alert', {
+                p_alert_id: alertId
+            });
+            if (error) throw error;
+
+            setSecurityAlerts((prev) =>
+                prev.map((alert) =>
+                    alert.id === alertId
+                        ? {
+                            ...alert,
+                            acknowledged_at: new Date().toISOString()
+                        }
+                        : alert
+                )
+            );
+
+            await fetchSecurityAlerts({ silent: true });
+        } catch (err: any) {
+            setSecurityAlertsError(err?.message || 'Não foi possível reconhecer o alerta.');
+        } finally {
+            setAcknowledgingAlertId(null);
+        }
+    }, [fetchSecurityAlerts]);
+
+    const fetchManualReviewTasks = useCallback(async (options?: { silent?: boolean }) => {
+        const silent = options?.silent === true;
+
+        if (!silent) {
+            setManualReviewLoading(true);
+        }
+        setManualReviewError(null);
+
+        try {
+            const { data, error } = await supabase.rpc('admin_list_news_tasks_manual_review', {
+                p_limit: 80
+            });
+
+            if (error) throw error;
+            setManualReviewTasks(Array.isArray(data) ? (data as ManualReviewTaskRow[]) : []);
+        } catch (err: any) {
+            const message = err?.message || 'Não foi possível carregar a fila de revisão manual.';
+            setManualReviewError(message);
+            if (!silent) {
+                setManualReviewTasks([]);
+            }
+        } finally {
+            if (!silent) {
+                setManualReviewLoading(false);
+            }
+        }
+    }, []);
+
+    const fetchManualReviewVotes = useCallback(async (taskId: string, options?: { force?: boolean }) => {
+        const normalizedTaskId = String(taskId || '').trim();
+        if (!normalizedTaskId) {
+            throw new Error('task_id inválido para carregar votos da revisão manual.');
+        }
+
+        if (!options?.force && manualReviewVotesByTask[normalizedTaskId]) {
+            return manualReviewVotesByTask[normalizedTaskId];
+        }
+
+        setManualReviewVotesLoadingTaskId(normalizedTaskId);
+        setManualReviewVotesError(null);
+
+        try {
+            const { data, error } = await supabase.rpc('admin_get_news_task_manual_review_votes', {
+                p_task_id: normalizedTaskId
+            });
+
+            if (error) throw error;
+
+            const rows = Array.isArray(data) ? (data as ManualReviewVoteRow[]) : [];
+            setManualReviewVotesByTask((prev) => ({
+                ...prev,
+                [normalizedTaskId]: rows
+            }));
+
+            return rows;
+        } catch (err: any) {
+            const message = err?.message || 'Não foi possível carregar os votos congelados desta tarefa.';
+            setManualReviewVotesError(message);
+            throw err;
+        } finally {
+            setManualReviewVotesLoadingTaskId((current) => (current === normalizedTaskId ? null : current));
+        }
+    }, [manualReviewVotesByTask]);
+
+    const forceSettleManualReviewTask = useCallback(async (
+        taskId: string,
+        correctVerdict: boolean,
+        resolutionNote?: string
+    ) => {
+        const normalizedTaskId = String(taskId || '').trim();
+        if (!normalizedTaskId) {
+            throw new Error('task_id inválido para liquidação manual.');
+        }
+
+        setManualReviewSettlingTaskId(normalizedTaskId);
+        setManualReviewError(null);
+        setManualReviewVotesError(null);
+
+        try {
+            const { data, error } = await supabase.rpc('admin_force_settle_news_task', {
+                p_task_id: normalizedTaskId,
+                p_correct_verdict: correctVerdict,
+                p_resolution_note: resolutionNote?.trim() || null
+            });
+
+            if (error) throw error;
+
+            setManualReviewTasks((prev) => prev.filter((task) => task.id !== normalizedTaskId));
+            setManualReviewVotesByTask((prev) => {
+                const next = { ...prev };
+                delete next[normalizedTaskId];
+                return next;
+            });
+
+            await Promise.allSettled([
+                fetchManualReviewTasks({ silent: true }),
+                fetchSecurityAlerts({ silent: true })
+            ]);
+
+            return data;
+        } catch (err: any) {
+            const message = err?.message || 'Não foi possível concluir a liquidação manual desta notícia.';
+            setManualReviewError(message);
+            throw err;
+        } finally {
+            setManualReviewSettlingTaskId((current) => (current === normalizedTaskId ? null : current));
+        }
+    }, [fetchManualReviewTasks, fetchSecurityAlerts]);
+
+    const cancelManualReviewTask = useCallback(async (
+        taskId: string,
+        resolutionNote?: string
+    ) => {
+        const normalizedTaskId = String(taskId || '').trim();
+        if (!normalizedTaskId) {
+            throw new Error('task_id inválido para anulação manual.');
+        }
+
+        setManualReviewSettlingTaskId(normalizedTaskId);
+        setManualReviewError(null);
+        setManualReviewVotesError(null);
+
+        try {
+            const note = resolutionNote?.trim() || '';
+            if (note.length < 20) {
+                throw new Error('Informe uma justificativa administrativa com pelo menos 20 caracteres para anular a tarefa.');
+            }
+
+            const { data, error } = await supabase.rpc('admin_cancel_news_task', {
+                p_task_id: normalizedTaskId,
+                p_resolution_note: note
+            });
+
+            if (error) throw error;
+
+            setManualReviewTasks((prev) => prev.filter((task) => task.id !== normalizedTaskId));
+            setManualReviewVotesByTask((prev) => {
+                const next = { ...prev };
+                delete next[normalizedTaskId];
+                return next;
+            });
+
+            await Promise.allSettled([
+                fetchManualReviewTasks({ silent: true }),
+                fetchSecurityAlerts({ silent: true })
+            ]);
+
+            return data;
+        } catch (err: any) {
+            const message = err?.message || 'Não foi possível anular esta notícia e emitir crédito compensatório.';
+            setManualReviewError(message);
+            throw err;
+        } finally {
+            setManualReviewSettlingTaskId((current) => (current === normalizedTaskId ? null : current));
+        }
+    }, [fetchManualReviewTasks, fetchSecurityAlerts]);
+
+    const bulkSettleManualReviewTasks = useCallback(async (
+        taskIds: string[],
+        correctVerdict: boolean,
+        resolutionNote?: string
+    ) => {
+        if (!taskIds || taskIds.length === 0) return;
+        
+        setManualReviewBulkLoading(true);
+        setManualReviewError(null);
+        
+        try {
+            const results = [];
+            const note = resolutionNote?.trim() || 'Liquidação administrativa em massa.';
+            
+            for (const taskId of taskIds) {
+                const { data, error } = await supabase.rpc('admin_force_settle_news_task', {
+                    p_task_id: taskId,
+                    p_correct_verdict: correctVerdict,
+                    p_resolution_note: note
+                });
+                
+                if (error) {
+                    console.error(`Erro ao liquidar tarefa ${taskId} em massa:`, error);
+                    continue;
+                }
+                
+                results.push(data);
+                setManualReviewTasks((prev) => prev.filter((task) => task.id !== taskId));
+                setManualReviewVotesByTask((prev) => {
+                    const next = { ...prev };
+                    delete next[taskId];
+                    return next;
+                });
+            }
+            
+            await Promise.allSettled([
+                fetchManualReviewTasks({ silent: true }),
+                fetchSecurityAlerts({ silent: true })
+            ]);
+            
+            return results;
+        } catch (err: any) {
+            setManualReviewError(err?.message || 'Erro durante a liquidação em massa.');
+            throw err;
+        } finally {
+            setManualReviewBulkLoading(false);
+            // Agora aguardamos as atualizações finais do banco de dados
+            await fetchManualReviewTasks();
+            await fetchSecurityAlerts();
+        }
+    }, [fetchManualReviewTasks, fetchSecurityAlerts]);
+
+    const bulkCancelManualReviewTasks = useCallback(async (
+        taskIds: string[],
+        resolutionNote?: string
+    ) => {
+        if (!taskIds || taskIds.length === 0) return;
+        
+        setManualReviewBulkLoading(true);
+        setManualReviewError(null);
+        
+        try {
+            const results = [];
+            const note = resolutionNote?.trim() || 'Anulação administrativa em massa (justificativa automática).';
+            
+            for (const taskId of taskIds) {
+                const { data, error } = await supabase.rpc('admin_cancel_news_task', {
+                    p_task_id: taskId,
+                    p_resolution_note: note.length >= 20 ? note : `${note} — Processamento em massa.`
+                });
+                
+                if (error) {
+                    console.error(`Erro ao anular tarefa ${taskId} em massa:`, error);
+                    continue;
+                }
+                
+                results.push(data);
+                setManualReviewTasks((prev) => prev.filter((task) => task.id !== taskId));
+                setManualReviewVotesByTask((prev) => {
+                    const next = { ...prev };
+                    delete next[taskId];
+                    return next;
+                });
+            }
+            
+            await Promise.allSettled([
+                fetchManualReviewTasks({ silent: true }),
+                fetchSecurityAlerts({ silent: true })
+            ]);
+            
+            return results;
+        } catch (err: any) {
+            setManualReviewError(err?.message || 'Erro durante a anulação em massa.');
+            throw err;
+        } finally {
+            setManualReviewBulkLoading(false);
+        }
+    }, [fetchManualReviewTasks, fetchSecurityAlerts]);
+
+    const fetchPixWithdrawals = useCallback(async (options?: { silent?: boolean }) => {
+        const silent = options?.silent === true;
+
+        if (!silent) {
+            setPixWithdrawalsLoading(true);
+        }
+        setPixWithdrawalsError(null);
+
+        try {
+            const { data, error } = await supabase.rpc('admin_list_pix_withdrawals', {
+                p_limit: 120,
+                p_statuses: ['pending_manual_review', 'pending', 'processing', 'failed', 'completed']
+            });
+
+            if (error) throw error;
+            setPixWithdrawals(Array.isArray(data) ? (data as AdminPixWithdrawalRow[]) : []);
+        } catch (err: any) {
+            const message = err?.message || 'Não foi possível carregar a fila de saques PIX.';
+            setPixWithdrawalsError(message);
+            if (!silent) {
+                setPixWithdrawals([]);
+            }
+        } finally {
+            if (!silent) {
+                setPixWithdrawalsLoading(false);
+            }
+        }
+    }, []);
+
+    const approvePixWithdrawalManualReview = useCallback(async (withdrawalId: string) => {
+        const normalizedWithdrawalId = String(withdrawalId || '').trim();
+        if (!normalizedWithdrawalId) {
+            throw new Error('withdrawal_id inválido para aprovação manual.');
+        }
+
+        setPixWithdrawalResolvingId(normalizedWithdrawalId);
+        setPixWithdrawalsError(null);
+
+        try {
+            const { data, error } = await supabase.rpc('approve_pix_withdrawal_manual_review', {
+                p_withdrawal_id: normalizedWithdrawalId
+            });
+
+            if (error) throw error;
+            if ((data as any)?.status === 'error') {
+                throw new Error((data as any)?.message || 'Não foi possível liberar este saque.');
+            }
+
+            await Promise.allSettled([
+                fetchPixWithdrawals({ silent: true }),
+                fetchSecurityAlerts({ silent: true })
+            ]);
+
+            return data;
+        } catch (err: any) {
+            const message = err?.message || 'Não foi possível liberar este saque para o worker.';
+            setPixWithdrawalsError(message);
+            throw err;
+        } finally {
+            setPixWithdrawalResolvingId((current) => (current === normalizedWithdrawalId ? null : current));
+        }
+    }, [fetchPixWithdrawals, fetchSecurityAlerts]);
+
+    const rejectPixWithdrawalManualReview = useCallback(async (withdrawalId: string, reason: string) => {
+        const normalizedWithdrawalId = String(withdrawalId || '').trim();
+        const normalizedReason = String(reason || '').trim();
+
+        if (!normalizedWithdrawalId) {
+            throw new Error('withdrawal_id inválido para rejeição manual.');
+        }
+
+        if (normalizedReason.length < 20) {
+            throw new Error('Informe uma justificativa administrativa com pelo menos 20 caracteres para rejeitar o saque.');
+        }
+
+        setPixWithdrawalResolvingId(normalizedWithdrawalId);
+        setPixWithdrawalsError(null);
+
+        try {
+            const { data, error } = await supabase.rpc('reject_pix_withdrawal_manual_review', {
+                p_withdrawal_id: normalizedWithdrawalId,
+                p_reason: normalizedReason
+            });
+
+            if (error) throw error;
+            if ((data as any)?.status === 'error') {
+                throw new Error((data as any)?.message || 'Não foi possível rejeitar este saque.');
+            }
+
+            await Promise.allSettled([
+                fetchPixWithdrawals({ silent: true }),
+                fetchSecurityAlerts({ silent: true }),
+                fetchData()
+            ]);
+
+            return data;
+        } catch (err: any) {
+            const message = err?.message || 'Não foi possível rejeitar este saque e compensar o saldo.';
+            setPixWithdrawalsError(message);
+            throw err;
+        } finally {
+            setPixWithdrawalResolvingId((current) => (current === normalizedWithdrawalId ? null : current));
+        }
+    }, [fetchData, fetchPixWithdrawals, fetchSecurityAlerts]);
+
+    const completePixWithdrawalManually = useCallback(async (withdrawalId: string) => {
+        const normalizedWithdrawalId = String(withdrawalId || '').trim();
+        if (!normalizedWithdrawalId) {
+            throw new Error('withdrawal_id inválido para conclusão manual.');
+        }
+
+        setPixWithdrawalResolvingId(normalizedWithdrawalId);
+        setPixWithdrawalsError(null);
+
+        try {
+            const { data, error } = await supabase.rpc('reconcile_pix_withdrawal', {
+                p_withdrawal_id: normalizedWithdrawalId,
+                p_target_status: 'completed',
+                p_external_payout_id: null,
+                p_external_status: 'manual_admin_transfer',
+                p_failure_reason: null,
+                p_external_response: { source: 'admin_manual_transfer', completed_by: 'admin' }
+            });
+
+            if (error) throw error;
+            if ((data as any)?.status === 'error') {
+                throw new Error((data as any)?.message || 'Não foi possível concluir este saque manualmente.');
+            }
+
+            await Promise.allSettled([
+                fetchPixWithdrawals({ silent: true }),
+                fetchSecurityAlerts({ silent: true }),
+                fetchData()
+            ]);
+
+            return data;
+        } catch (err: any) {
+            const message = err?.message || 'Não foi possível concluir este saque manualmente.';
+            setPixWithdrawalsError(message);
+            throw err;
+        } finally {
+            setPixWithdrawalResolvingId((current) => (current === normalizedWithdrawalId ? null : current));
+        }
+    }, [fetchData, fetchPixWithdrawals, fetchSecurityAlerts]);
+
+    const getPixWithdrawalFullKey = useCallback(async (withdrawalId: string): Promise<string | null> => {
+        const normalizedId = String(withdrawalId || '').trim();
+        if (!normalizedId) return null;
+
+        try {
+            const { data, error } = await supabase.rpc('admin_get_pix_withdrawal_full_key', {
+                p_withdrawal_id: normalizedId
+            });
+
+            if (error) throw error;
+            return typeof data === 'string' ? data : null;
+        } catch {
+            return null;
+        }
+    }, []);
 
     const saveSeller = async (sellerData: any) => {
         setIsSavingSeller(true);
@@ -781,35 +1514,153 @@ export const useAdminData = (activeTab: string) => {
         }));
     };
 
-    useEffect(() => { checkAdmin(); fetchData(); fetchTotals(); }, [fetchData]);
+    const openSecurityAlerts = useMemo(
+        () => securityAlerts.filter((alert) => !alert.acknowledged_at),
+        [securityAlerts]
+    );
+
+    const criticalSecurityAlerts = useMemo(
+        () => openSecurityAlerts.filter((alert) => alert.severity === 'critical' || alert.severity === 'high'),
+        [openSecurityAlerts]
+    );
+
+    const openPixWithdrawals = useMemo(
+        () => pixWithdrawals.filter((withdrawal) =>
+            withdrawal.status === 'pending' ||
+            withdrawal.status === 'pending_manual_review' ||
+            withdrawal.status === 'processing'
+        ),
+        [pixWithdrawals]
+    );
+
+    const pendingManualReviewPixWithdrawals = useMemo(
+        () => pixWithdrawals.filter((withdrawal) =>
+            withdrawal.status === 'pending_manual_review'
+        ),
+        [pixWithdrawals]
+    );
+
+    const loadCollaborators = useCallback(async () => {
+        try {
+            setCollaboratorsLoading(true);
+            const { data, error } = await supabase.rpc('admin_list_collaborators');
+            if (error) throw error;
+            setCollaborators(data || []);
+        } catch (err: any) {
+            setCollaboratorsError(err.message);
+        } finally {
+            setCollaboratorsLoading(false);
+        }
+    }, []);
+
+    const saveCollaborator = async (email: string, pass: string) => {
+        try {
+            setIsSavingCollaborator(true);
+            const { data, error } = await supabase.rpc('admin_create_collaborator', {
+                p_email: email,
+                p_password: pass
+            });
+            if (error) throw error;
+            if (data?.status === 'error') throw new Error(data.message);
+            await loadCollaborators();
+            return data;
+        } finally {
+            setIsSavingCollaborator(false);
+        }
+    };
+
+    const deleteCollaborator = async (id: string) => {
+        const { data, error } = await supabase.rpc('admin_delete_collaborator', { p_user_id: id });
+        if (error) throw error;
+        if (data?.status === 'error') throw new Error(data.message);
+        await loadCollaborators();
+        return data;
+    };
+
+    useEffect(() => { checkAccess(); fetchData(); fetchTotals(); }, [fetchData]);
 
     useEffect(() => {
+        if (isAdmin || isCollaborator) {
+            if (activeTab === 'news') fetchAdminNewsFeed();
+        }
+
         if (isAdmin) {
             loadSellers();
             loadHomeConfig();
             loadCycleConfig();
             fetchCycleOptions();
+            fetchSecurityAlerts({ silent: activeTab !== 'alerts' });
+            fetchManualReviewTasks({ silent: activeTab !== 'reviews' });
+            fetchPixWithdrawals({ silent: activeTab !== 'withdrawals' });
             if (activeTab === 'cycles') loadCycleBundles(selectedCycleOffset);
-            if (activeTab === 'news') fetchAdminNewsFeed();
             if (activeTab === 'winners') fetchWinnersHistory();
+            if (activeTab === 'collaborators') loadCollaborators();
         }
-    }, [isAdmin, activeTab, selectedCycleOffset, loadCycleBundles, fetchAdminNewsFeed, fetchWinnersHistory, fetchCycleOptions]);
+    }, [isAdmin, isCollaborator, activeTab, selectedCycleOffset, loadCycleBundles, fetchAdminNewsFeed, fetchWinnersHistory, fetchCycleOptions, fetchSecurityAlerts, fetchManualReviewTasks, fetchPixWithdrawals, loadCollaborators]);
+
+    useEffect(() => {
+        if (!isAdmin) return;
+
+        const intervalId = window.setInterval(() => {
+            void fetchSecurityAlerts({ silent: true });
+        }, 20000);
+
+        return () => window.clearInterval(intervalId);
+    }, [isAdmin, fetchSecurityAlerts]);
+
+    useEffect(() => {
+        if (!isAdmin) return;
+
+        const intervalId = window.setInterval(() => {
+            void fetchManualReviewTasks({ silent: true });
+        }, 30000);
+
+        return () => window.clearInterval(intervalId);
+    }, [isAdmin, fetchManualReviewTasks]);
+
+    useEffect(() => {
+        if (!isAdmin) return;
+
+        const intervalId = window.setInterval(() => {
+            void fetchPixWithdrawals({ silent: true });
+        }, 30000);
+
+        return () => window.clearInterval(intervalId);
+    }, [isAdmin, fetchPixWithdrawals]);
 
     return {
-        loading, isAdmin, totals, users, searchTerm, setSearchTerm, currentUsersPage, setCurrentUsersPage,
-        selectedUser, setSelectedUser, showDetailsModal, setShowDetailsModal, handleDeleteUser,
+        loading, isAdmin, isCollaborator, totals, users, searchTerm, setSearchTerm, 
+        registrationDateFilter, setRegistrationDateFilter,
+        currentUsersPage, setCurrentUsersPage,
+        selectedUser, setSelectedUser, 
+        userHistory, userHistoryLoading, fetchUserHistory,
+        showDetailsModal, setShowDetailsModal, handleDeleteUser,
         cycleOptions, selectedCycleOffset, setSelectedCycleOffset, cycleBundle, prevCycleBundle,
         cycleLoading, cycleError, fetchCycleData: loadCycleBundles,
-        cycleWinners, winnersLoading, winnersError, fetchWinnersHistory, handleExportWinnerCsv: () => {}, // TODO
+        cycleWinners, winnersLoading, winnersError, fetchWinnersHistory, handleExportWinnerCsv: () => {}, 
         winnerFilterOptions, winnerStatusFilter, setWinnerStatusFilter, winnerSearchTerm, setWinnerSearchTerm,
         winnerSortOrder, setWinnerSortOrder, visibleCycleWinners, winnerDrafts, updateWinnerDraft,
-        fetchWinners: fetchWinnersHistory, // Alias for component compatibility
+        fetchWinners: fetchWinnersHistory,
         handleSaveWinnerFollowup, savingWinnerCycle, winnerHistoryByCycle,
-        adminNewsLoading, adminNewsItems, previousAdminNewsItems, currentNewsCycle, previousNewsCycle,
-        newsPublishing, newsMessage, restoringNewsId, handlePublishNews, handleDeleteNews, handleRestoreNews, fetchNews: fetchAdminNewsFeed,
+        adminNewsLoading, adminNewsItems, previousAdminNewsItems, currentNewsCycle, previousNewsCycle, 
+        newsPublishing, newsMessage, restoringNewsId, fetchNews: fetchAdminNewsFeed, handlePublishNews, 
+        handleUpdateNews, handleDeleteNews, handleRestoreNews, handleLogout,
         sellers, sellersLoading, sellersError, loadSellers, isSavingSeller, saveSeller, deleteSeller, resetSellerPassword,
-        homeConfig, isSavingHomeConfig, updateHomeConfig,
-        activeCycleId, cycleConfig, isSavingCycleConfig, updateCycleConfig,
-        handleLogout
+        securityAlerts, securityAlertsLoading, securityAlertsError, fetchSecurityAlerts, acknowledgeSecurityAlert, 
+        acknowledgingAlertId, 
+        openSecurityAlertsCount: (openSecurityAlerts || []).length, 
+        criticalSecurityAlertsCount: (criticalSecurityAlerts || []).length,
+        pixWithdrawals, pixWithdrawalsLoading, pixWithdrawalsError, fetchPixWithdrawals,
+        approvePixWithdrawalManualReview, rejectPixWithdrawalManualReview,
+        completePixWithdrawalManually, getPixWithdrawalFullKey,
+        pixWithdrawalResolvingId, openPixWithdrawalCount: openPixWithdrawals.length,
+        pendingManualReviewPixWithdrawalCount: pendingManualReviewPixWithdrawals.length,
+        manualReviewTasks, manualReviewLoading, manualReviewError, fetchManualReviewTasks, 
+        manualReviewVotesByTask, manualReviewVotesLoadingTaskId, manualReviewVotesError, fetchManualReviewVotes, 
+        manualReviewSettlingTaskId, forceSettleManualReviewTask, cancelManualReviewTask, 
+        manualReviewBulkLoading, bulkSettleManualReviewTasks, bulkCancelManualReviewTasks,
+        openManualReviewCount: (manualReviewTasks || []).length,
+        homeConfig, isSavingHomeConfig, updateHomeConfig, activeCycleId, cycleConfig, isSavingCycleConfig, updateCycleConfig,
+        collaborators, collaboratorsLoading, collaboratorsError, isSavingCollaborator, loadCollaborators, saveCollaborator, deleteCollaborator
     };
 };

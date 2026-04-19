@@ -8,9 +8,19 @@ interface NewsCarouselProps {
     isReadOnly?: boolean;
     autoPlay?: boolean;
     interval?: number;
+    emptyTitle?: string;
+    emptyDescription?: string;
 }
 
-export const NewsCarousel: React.FC<NewsCarouselProps> = ({ tasks, onValidate, isReadOnly = false, autoPlay = false, interval = 3000 }) => {
+export const NewsCarousel: React.FC<NewsCarouselProps> = ({
+    tasks,
+    onValidate,
+    isReadOnly = false,
+    autoPlay = false,
+    interval = 3000,
+    emptyTitle = 'Tudo limpo!',
+    emptyDescription = 'Nenhuma notícia disponível no momento.'
+}) => {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [isPaused, setIsPaused] = useState(false);
 
@@ -94,15 +104,14 @@ export const NewsCarousel: React.FC<NewsCarouselProps> = ({ tasks, onValidate, i
                     <CheckCircle className="w-8 h-8 text-green-500" />
                 </div>
                 <div>
-                    <h3 className="text-white font-bold text-lg">Tudo limpo!</h3>
-                    <p className="text-slate-400 text-sm mt-1">Nenhuma notícia disponível no momento.</p>
+                    <h3 className="text-white font-bold text-lg">{emptyTitle}</h3>
+                    <p className="text-slate-400 text-sm mt-1">{emptyDescription}</p>
                 </div>
             </div>
         );
     }
 
     const currentTask = tasks[currentIndex];
-    const rewardValue = Number(currentTask?.content?.reward ?? 0);
 
     return (
         <div className="w-full">
@@ -169,17 +178,6 @@ export const NewsCarousel: React.FC<NewsCarouselProps> = ({ tasks, onValidate, i
                         </div>
                     )}
 
-                    {/* Tags */}
-                    <div className="absolute top-4 left-4 flex gap-2">
-                        {currentTask.difficulty && (
-                            <span className="px-2 py-1 rounded-md bg-black/60 backdrop-blur-md border border-white/10 text-[10px] font-bold text-white uppercase tracking-wider">
-                                {currentTask.difficulty}
-                            </span>
-                        )}
-                        <span className="px-2 py-1 rounded-md bg-purple-600/90 backdrop-blur-md border border-purple-400/20 text-[10px] font-bold text-white uppercase tracking-wider shadow-lg">
-                            + R$ {rewardValue.toFixed(2)}
-                        </span>
-                    </div>
                 </div>
 
                 {/* Content */}

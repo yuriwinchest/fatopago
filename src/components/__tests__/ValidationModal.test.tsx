@@ -21,9 +21,16 @@ vi.mock('../../lib/supabase', () => {
         supabase: {
             rpc: vi.fn(),
             auth: {
-                getSession: vi.fn(() => Promise.resolve({ data: { session: { user: { id: 'test-user' } } }, error: null }))
+                getSession: vi.fn(() => Promise.resolve({ data: { session: { user: { id: 'test-user' } } }, error: null })),
+                getUser: vi.fn(() => Promise.resolve({ data: { user: { id: 'test-user' } }, error: null }))
             },
-            from: vi.fn(() => mockQuery)
+            from: vi.fn(() => mockQuery),
+            storage: {
+                from: vi.fn(() => ({
+                    upload: vi.fn(() => Promise.resolve({ data: { path: 'test-user/proof.png' }, error: null })),
+                    getPublicUrl: vi.fn(() => ({ data: { publicUrl: 'https://cdn.test/proof.png' } }))
+                }))
+            }
         }
     };
 });
@@ -67,6 +74,13 @@ const renderModal = (props = {}) => {
 describe('ValidationModal', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        vi.mocked(supabase.rpc).mockImplementation(async (fn: string) => {
+            if (fn === 'submit_validation') {
+                return { data: { status: 'success' }, error: null } as any;
+            }
+
+            return { data: null, error: null } as any;
+        });
     });
 
     it('renders task title and source', () => {
@@ -76,7 +90,7 @@ describe('ValidationModal', () => {
     });
 
     it('calls RPC when clicking VERDADEIRO', async () => {
-        const rpcMock = vi.mocked(supabase.rpc).mockResolvedValue({ data: { status: 'success' }, error: null });
+        const rpcMock = vi.mocked(supabase.rpc);
         renderModal();
 
         fireEvent.click(screen.getByText('VERDADEIRO'));
@@ -97,16 +111,46 @@ describe('ValidationModal', () => {
         expect(screen.getByPlaceholderText(/Explique por que esta notícia é falsa/i)).toBeInTheDocument();
     });
 
-    it('prevents submission of FALSO without justification', async () => {
-        const alertMock = vi.spyOn(window, 'alert').mockImplementation(() => { });
+    it('bloqueia confirmação de falso sem prova completa', async () => {
+        const rpcMock = vi.mocked(supabase.rpc);
         renderModal();
 
-        // Go to false flow
         fireEvent.click(screen.getByText('FALSO'));
-
-        // Click confirm without justification
         fireEvent.click(screen.getByText('CONFIRMAR'));
 
-        expect(alertMock).toHaveBeenCalledWith(expect.stringContaining('justifique com pelo menos 10 caracteres'));
+        await waitFor(() => {
+            expect(screen.getByText(/justificativa com pelo menos/i)).toBeInTheDocument();
+        });
+
+        expect(rpcMock).not.toHaveBeenCalledWith('submit_validation', expect.anything());
+    });
+
+    it('envia falso com justificativa, link e foto', async () => {
+        const rpcMock = vi.mocked(supabase.rpc);
+        renderModal();
+
+        fireEvent.click(screen.getByText('FALSO'));
+        fireEvent.change(screen.getByPlaceholderText(/Explique por que esta notícia é falsa/i), {
+            target: { value: 'A notícia foi desmentida por fonte oficial.' }
+        });
+        fireEvent.change(screen.getByPlaceholderText(/https:\/\/fonte-confiavel.com/i), {
+            target: { value: 'fonte-confiavel.com/prova' }
+        });
+        fireEvent.change(screen.getByLabelText(/Foto da evidência/i), {
+            target: {
+                files: [new File(['proof'], 'evidencia.png', { type: 'image/png' })]
+            }
+        });
+        fireEvent.click(screen.getByText('CONFIRMAR'));
+
+        await waitFor(() => {
+            expect(rpcMock).toHaveBeenCalledWith('submit_validation', expect.objectContaining({
+                p_task_id: 'task-123',
+                p_verdict: false,
+                p_justification: 'A notícia foi desmentida por fonte oficial.',
+                p_proof_link: 'https://fonte-confiavel.com/prova',
+                p_proof_image_url: 'https://cdn.test/proof.png'
+            }));
+        });
     });
 });

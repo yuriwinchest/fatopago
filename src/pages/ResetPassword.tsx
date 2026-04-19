@@ -1,4 +1,5 @@
 import { ArrowRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { usePasswordReset } from '../hooks/usePasswordReset';
 import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
@@ -13,6 +14,8 @@ const ResetPassword = () => {
         confirmPassword,
         setConfirmPassword,
         loading,
+        checkingRecovery,
+        hasRecoverySession,
         error,
         handleReset
     } = usePasswordReset();
@@ -32,7 +35,7 @@ const ResetPassword = () => {
                         tasks={MOCK_NEWS}
                         onValidate={() => { }}
                         isReadOnly={true}
-                        autoPlay={true}
+                        autoPlay={false}
                         interval={3000}
                     />
                 </div>
@@ -55,40 +58,67 @@ const ResetPassword = () => {
     return (
         <AuthLayout leftPanelContent={LeftContent}>
             <h2 className="text-3xl font-bold text-white mb-2">Nova Senha</h2>
-            <p className="text-slate-400 mb-8">Digite sua nova senha abaixo.</p>
+            <p className="text-slate-400 mb-8">
+                {checkingRecovery
+                    ? 'Validando seu link de recuperação...'
+                    : hasRecoverySession
+                        ? 'Digite sua nova senha abaixo.'
+                        : 'Solicite um novo e-mail para redefinir sua senha.'}
+            </p>
 
-            <form onSubmit={handleReset} className="space-y-5">
-                <Input
-                    label="Nova Senha"
-                    type="password"
-                    placeholder="Nova senha"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                />
+            {checkingRecovery ? (
+                <div className="rounded-xl border border-white/10 bg-white/5 p-6 text-sm text-slate-300">
+                    Aguarde alguns instantes enquanto validamos o link enviado para seu e-mail.
+                </div>
+            ) : hasRecoverySession ? (
+                <form onSubmit={handleReset} className="space-y-5">
+                    <Input
+                        label="Nova Senha"
+                        type="password"
+                        placeholder="Nova senha"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                    />
 
-                <Input
-                    label="Confirmar Nova Senha"
-                    type="password"
-                    placeholder="Confirme a nova senha"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                />
+                    <Input
+                        label="Confirmar Nova Senha"
+                        type="password"
+                        placeholder="Confirme a nova senha"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                    />
 
-                {error && (
-                    <div className="p-3 rounded-lg bg-red-400/10 border border-red-400/20 text-red-400 text-sm animate-in fade-in slide-in-from-top-2">
-                        {error}
-                    </div>
-                )}
+                    {error && (
+                        <div className="p-3 rounded-lg bg-red-400/10 border border-red-400/20 text-red-400 text-sm animate-in fade-in slide-in-from-top-2">
+                            {error}
+                        </div>
+                    )}
 
-                <Button
-                    type="submit"
-                    fullWidth
-                    isLoading={loading}
-                    rightIcon={!loading && <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />}
-                >
-                    {loading ? "Salvando..." : "Redefinir Senha"}
-                </Button>
-            </form>
+                    <Button
+                        type="submit"
+                        fullWidth
+                        isLoading={loading}
+                        rightIcon={!loading && <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />}
+                    >
+                        {loading ? "Salvando..." : "Salvar nova senha"}
+                    </Button>
+                </form>
+            ) : (
+                <div className="space-y-5">
+                    {error && (
+                        <div className="p-3 rounded-lg bg-red-400/10 border border-red-400/20 text-red-400 text-sm animate-in fade-in slide-in-from-top-2">
+                            {error}
+                        </div>
+                    )}
+
+                    <Link
+                        to="/forgot-password"
+                        className="inline-flex w-full items-center justify-center rounded-xl bg-[hsl(var(--primary))] px-4 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+                    >
+                        Solicitar novo link
+                    </Link>
+                </div>
+            )}
         </AuthLayout>
     );
 };

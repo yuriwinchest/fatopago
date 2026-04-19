@@ -39,29 +39,6 @@ const ValidationHub = () => {
         retry
     } = useValidationHub();
 
-    const formatCurrency = (val: number) => {
-        return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
-    };
-
-    const getDifficultyColor = (diff: string) => {
-        switch (diff) {
-            case 'easy':
-                return 'bg-green-500/20 text-green-400 border-green-500/30';
-            case 'medium':
-                return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
-            case 'hard':
-                return 'bg-red-500/20 text-red-400 border-red-500/30';
-            default:
-                return 'bg-slate-500/20 text-slate-400 border-white/10';
-        }
-    };
-
-    const getDifficultyLabel = (difficulty: string) => {
-        if (difficulty === 'hard') return 'Dificil';
-        if (difficulty === 'medium') return 'Medio';
-        return 'Facil';
-    };
-
     const handleValidateClick = async (taskId: string) => {
         if (checkingPlan) return;
         setCheckingPlan(true);
@@ -93,12 +70,10 @@ const ValidationHub = () => {
             return;
         }
 
-        setPlanNotice(access.status === 'error' ? access.message : 'Nao foi possivel verificar seu plano.');
+        setPlanNotice(access.status === 'error' ? access.message : 'Não foi possível verificar seu plano.');
         navigate(`/plans?reason=error&returnTo=/validation/task/${taskId}`);
         setCheckingPlan(false);
     };
-
-    const hardCount = filteredTasks.filter(task => task.content.difficulty === 'hard').length;
 
     const renderTaskCard = (task: NewsTask, mode: 'mobile' | 'desktop') => (
         <article
@@ -124,17 +99,6 @@ const ValidationHub = () => {
                 <div className="absolute inset-0 bg-gradient-to-t from-[#0F0529] via-[#0F0529]/80 to-transparent" />
             </div>
 
-            <div className="absolute left-4 top-4 z-10 flex gap-2">
-                <span className={cn('rounded-full border px-2 py-1 text-[10px] font-bold uppercase backdrop-blur-md shadow-lg', getDifficultyColor(task.content.difficulty))}>
-                    {getDifficultyLabel(task.content.difficulty)}
-                </span>
-                {task.content.reward >= 1.0 && (
-                    <span className="rounded-full bg-red-500 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-white shadow-lg">
-                        Alta
-                    </span>
-                )}
-            </div>
-
             <div className="relative z-10 flex h-full flex-col justify-end p-6">
                 <div className="mb-2">
                     <div className="mb-2 flex items-center gap-2">
@@ -150,8 +114,8 @@ const ValidationHub = () => {
 
                 <div className="-mx-6 -mb-6 flex items-center justify-between border-t border-white/10 bg-black/20 px-6 py-4 backdrop-blur-sm">
                     <div className="flex flex-col">
-                        <span className="mb-0.5 text-[9px] font-bold uppercase text-zinc-400">Recompensa</span>
-                        <span className="text-lg font-bold text-[#00E676]">{formatCurrency(task.content.reward)}</span>
+                        <span className="mb-0.5 text-[9px] font-bold uppercase text-zinc-400">Consumo</span>
+                        <span className="text-sm font-bold text-white">1 notícia do pacote</span>
                     </div>
                     <Button
                         onClick={() => handleValidateClick(task.id)}
@@ -182,8 +146,8 @@ const ValidationHub = () => {
 
     return (
         <AppLayout
-            title="Painel de Validacao"
-            subtitle="Escolha uma noticia para verificar"
+            title="Painel de Validação"
+            subtitle="Escolha uma notícia para verificar"
             headerClassName="pb-4"
         >
             {showCycleModal && (
@@ -202,12 +166,12 @@ const ValidationHub = () => {
                             </button>
                         </div>
 
-                        <h2 className="mb-3 text-2xl font-bold text-white">Ciclo nao disponivel</h2>
+                        <h2 className="mb-3 text-2xl font-bold text-white">Ciclo não disponível</h2>
                         <p className="mb-6 text-sm leading-relaxed text-slate-300">{cycleModalMessage}</p>
 
                         <div className="mb-6 rounded-xl border border-purple-500/20 bg-purple-500/10 p-4">
                             <p className="text-xs leading-relaxed text-purple-200">
-                                Os ciclos de validacao duram 24 horas. Apos cada ciclo, ha intervalo de 30 minutos antes do proximo.
+                                Os ciclos de validação são semanais: começam no domingo, às 12h, e terminam no domingo seguinte, às 11h. Entre 11h e 12h, a plataforma fecha o ciclo anterior e abre o novo.
                             </p>
                         </div>
 
@@ -281,16 +245,11 @@ const ValidationHub = () => {
                         </div>
 
                         <Card tone="default" className="border-white/10 bg-[#1A1040] p-4">
-                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                                <div>
-                                    <h3 className="text-lg font-bold text-white">Noticias para validar</h3>
-                                    <p className="text-xs text-slate-400">
-                                        Categoria atual: <span className="font-bold text-slate-200">{selectedCategory}</span>
-                                    </p>
-                                </div>
-                                <div className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-300">
-                                    Dificeis: <span className="font-bold text-white">{hardCount}</span>
-                                </div>
+                            <div>
+                                <h3 className="text-lg font-bold text-white">Notícias para validar</h3>
+                                <p className="text-xs text-slate-400">
+                                    Categoria atual: <span className="font-bold text-slate-200">{selectedCategory}</span>
+                                </p>
                             </div>
                         </Card>
 
@@ -319,7 +278,7 @@ const ValidationHub = () => {
                                         ref={scrollContainerRef}
                                         onScroll={handleUserScroll}
                                         className="-mx-6 flex snap-x snap-mandatory gap-4 overflow-x-auto px-6 pb-8 scrollbar-hide overscroll-x-contain scroll-smooth touch-pan-x"
-                                        aria-label="Carrossel de noticias"
+                                        aria-label="Carrossel de notícias"
                                     >
                                         {filteredTasks.map(task => renderTaskCard(task, 'mobile'))}
                                     </div>
@@ -334,7 +293,7 @@ const ValidationHub = () => {
                                 <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-white/5">
                                     <Filter className="h-8 w-8 text-slate-600" />
                                 </div>
-                                <h3 className="mb-1 font-bold text-slate-200">Nenhuma noticia encontrada</h3>
+                                <h3 className="mb-1 font-bold text-slate-200">Nenhuma notícia encontrada</h3>
                                 <p className="text-xs text-slate-500">Tente selecionar outra categoria.</p>
                             </Card>
                         )}
@@ -342,7 +301,7 @@ const ValidationHub = () => {
                         {loadingMore && (
                             <div className="flex items-center justify-center gap-2 py-2 text-sm text-slate-400">
                                 <Loader2 className="h-4 w-4 animate-spin" />
-                                Carregando mais noticias...
+                                Carregando mais notícias...
                             </div>
                         )}
 

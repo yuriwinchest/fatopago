@@ -1,11 +1,17 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
+import { getPasswordRecoveryPrefilledEmail } from '../lib/passwordRecovery';
+
+const getInitialEmail = () => {
+    if (typeof window === 'undefined') return '';
+    return getPasswordRecoveryPrefilledEmail(window.location.search);
+};
 
 export function useAuthRecovery() {
     const [loading, setLoading] = useState(false);
     const [success, setSuccess] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [email, setEmail] = useState('');
+    const [email, setEmail] = useState(getInitialEmail);
 
     const handleForgotPassword = async (e: React.FormEvent) => {
         e.preventDefault();

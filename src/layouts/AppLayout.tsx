@@ -29,7 +29,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
     };
 
     return (
-        <div className="min-h-screen bg-[#0F0529] text-white font-sans pb-24 relative overflow-x-hidden">
+        <div className="relative min-h-screen min-h-[100dvh] touch-pan-y overflow-x-hidden bg-[#0F0529] pb-[calc(6rem+env(safe-area-inset-bottom))] text-white font-sans lg:pb-10">
             <AppHeader
                 title={title}
                 subtitle={subtitle}
@@ -41,7 +41,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
 
             <CycleTimer />
 
-            <main className="max-w-md mx-auto px-6 mt-6">
+            <main className="mx-auto mt-6 w-full max-w-md touch-pan-y px-6 md:px-8 lg:mt-8 lg:max-w-[1200px] lg:px-10">
                 {children}
             </main>
 
