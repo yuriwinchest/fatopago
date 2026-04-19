@@ -62,14 +62,15 @@ Este arquivo é a fonte única de verdade sobre contexto, padrões e regras oper
 
 Registra decisões e limitações **descobertas em produção** que afetam o desenvolvimento futuro. Atualizar conforme novas descobertas.
 
-### Saque PIX (crítico)
+### Saque PIX (estado atual: UI desativada em 2026-04-19)
 - **Mercado Pago NÃO possui API de PIX payout no Brasil.** O endpoint `/v1/transfers` não existe. O `/v1/payouts` é só México. Isso **não é bug** — é limitação da plataforma.
-- O saque hoje funciona em **fluxo 100% manual** via painel admin (`/admin-dashboard` aba "Saques")
-- Threshold de revisão manual: **R$ 0,00** (TODAS as solicitações vão para `pending_manual_review`)
-- Admin revela chave PIX, faz a transferência no banco dele, marca como "Já transferi" no painel
-- RPCs disponíveis: `admin_list_pix_withdrawals`, `approve_pix_withdrawal_manual_review`, `reject_pix_withdrawal_manual_review`, `admin_get_pix_withdrawal_full_key`, `reconcile_pix_withdrawal`
-- Edge Function `process-pending-withdrawals` (worker automático) **existe mas não funciona** por causa do endpoint MP inexistente. Deixar como está até integrar Stark Bank.
-- Plano: quando Stark Bank for integrado, trocar URL/formato no worker e subir threshold de volta para R$ 500 (ou valor decidido)
+- **A aba "Saques" do admin foi REMOVIDA da UI em 2026-04-19** por decisão do owner (não estava em uso operacional). Não há mais interface visual pra aprovar/rejeitar/completar saques.
+- **Backend 100% preservado** — RPCs, migrations, Edge Functions continuam no banco:
+  - `admin_list_pix_withdrawals`, `approve_pix_withdrawal_manual_review`, `reject_pix_withdrawal_manual_review`, `admin_get_pix_withdrawal_full_key`, `reconcile_pix_withdrawal`, `request_pix_withdrawal`, `claim_pending_pix_withdrawals`
+  - Edge Function `process-pending-withdrawals` (worker automático) **existe mas não funciona** por causa do endpoint MP inexistente.
+- **Se usuário pedir saque hoje**: o registro vai pro banco em `pix_withdrawals` com status `pending_manual_review` (threshold R$ 0,00), mas **não há UI pra admin processar**. Precisa ser aprovado **via SQL direto no Supabase** chamando as RPCs manualmente, OU reativar a aba re-adicionando `WithdrawalReviewPanel.tsx` e a entrada de tab.
+- **Mesma coisa vale para `SecurityAlertsPanel` e `ManualReviewQueuePanel`**: UI removida, dados e RPCs preservados.
+- **Plano futuro**: quando Stark Bank for integrado (tem API de payout), trocar URL/formato no worker E reativar UI da aba Saques.
 
 ### Ranking e visibilidade
 - Landing page **nunca** mostra contagem de validações — só posição (#1, #2, #3)

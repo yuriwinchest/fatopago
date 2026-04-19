@@ -1,5 +1,5 @@
 import { Suspense, lazy, useMemo, useState, useEffect } from 'react';
-import { Users, Trophy, RefreshCw, Newspaper, Settings, LogOut, ShieldAlert, Scale, ShieldCheck, BarChart3, ArrowRightLeft } from 'lucide-react';
+import { Users, Trophy, RefreshCw, Newspaper, Settings, LogOut, ShieldCheck, BarChart3 } from 'lucide-react';
 import AppHeader from '../components/AppHeader';
 import PageLoader from '../components/ui/PageLoader';
 
@@ -16,15 +16,15 @@ const SellerManager = lazy(() => import('../components/admin/SellerManager'));
 const PromoMediaManager = lazy(() => import('../components/admin/PromoMediaManager'));
 const AdminConfig = lazy(() => import('../components/admin/AdminConfig'));
 const CycleConfig = lazy(() => import('../components/admin/CycleConfig'));
-const SecurityAlertsPanel = lazy(() => import('../components/admin/SecurityAlertsPanel'));
-const ManualReviewQueuePanel = lazy(() => import('../components/admin/ManualReviewQueuePanel'));
-const WithdrawalReviewPanel = lazy(() => import('../components/admin/WithdrawalReviewPanel'));
+// Abas 'alerts', 'reviews' e 'withdrawals' foram removidas da UI em 2026-04-19
+// por decisao do owner (nao estavam em uso). RPCs e migrations mantidas no
+// banco pra reativacao futura se necessario. Ver CLAUDE.md secao 3.
 const CollaboratorManager = lazy(() => import('../components/admin/CollaboratorManager'));
 const SellerSalesReport = lazy(() => import('../components/admin/SellerSalesReport'));
 const UserDetailModal = lazy(() => import('../components/admin/UserDetailModal'));
 
 const AdminDashboard = () => {
-    const [activeTab, setActiveTab] = useState<'users' | 'cycles' | 'winners' | 'sellers' | 'seller_sales' | 'news' | 'media' | 'alerts' | 'reviews' | 'withdrawals' | 'collaborators'>('users');
+    const [activeTab, setActiveTab] = useState<'users' | 'cycles' | 'winners' | 'sellers' | 'seller_sales' | 'news' | 'media' | 'collaborators'>('users');
     
     const {
         loading,
@@ -86,37 +86,9 @@ const AdminDashboard = () => {
         saveSeller,
         deleteSeller,
         resetSellerPassword,
-        securityAlerts,
-        securityAlertsLoading,
-        securityAlertsError,
-        fetchSecurityAlerts,
-        acknowledgeSecurityAlert,
-        acknowledgingAlertId,
-        openSecurityAlertsCount,
-        criticalSecurityAlertsCount,
-        pixWithdrawals,
-        pixWithdrawalsLoading,
-        pixWithdrawalsError,
-        fetchPixWithdrawals,
-        approvePixWithdrawalManualReview,
-        rejectPixWithdrawalManualReview,
-        completePixWithdrawalManually,
-        getPixWithdrawalFullKey,
-        pixWithdrawalResolvingId,
-        openPixWithdrawalCount,
-        pendingManualReviewPixWithdrawalCount,
-        manualReviewTasks,
-        manualReviewLoading,
-        fetchManualReviewTasks,
-        manualReviewVotesByTask,
-        fetchManualReviewVotes,
-        manualReviewSettlingTaskId,
-        forceSettleManualReviewTask,
-        cancelManualReviewTask,
-        manualReviewBulkLoading,
-        bulkSettleManualReviewTasks,
-        bulkCancelManualReviewTasks,
-        openManualReviewCount,
+        // Dados de securityAlerts, pixWithdrawals e manualReview ainda expostos
+        // pelo hook useAdminData (nao removidos por seguranca — RPCs preservadas).
+        // As abas desses dominios foram removidas da UI em 2026-04-19.
         homeConfig,
         isSavingHomeConfig,
         updateHomeConfig,
@@ -158,9 +130,6 @@ const AdminDashboard = () => {
         seller_sales: 'Carregando vendas...',
         news: 'Carregando notícias...',
         media: 'Carregando mídia e configuração...',
-        alerts: 'Carregando alertas...',
-        reviews: 'Carregando revisão manual...',
-        withdrawals: 'Carregando saques...',
         collaborators: 'Carregando colaboradores...'
     };
 
@@ -234,9 +203,6 @@ const AdminDashboard = () => {
                             { id: 'users', label: 'Usuários', icon: Users, adminOnly: true },
                             { id: 'cycles', label: 'Ciclos', icon: RefreshCw, adminOnly: true },
                             { id: 'winners', label: 'Vencedores', icon: Trophy, adminOnly: true },
-                            { id: 'alerts', label: 'Alertas', icon: ShieldAlert, adminOnly: true },
-                            { id: 'reviews', label: 'Revisão Manual', icon: Scale, adminOnly: true },
-                            { id: 'withdrawals', label: 'Saques', icon: ArrowRightLeft, adminOnly: true },
                             { id: 'news', label: 'Notícias', icon: Newspaper, adminOnly: false },
                             { id: 'sellers', label: 'Vendedores', icon: Users, adminOnly: true },
                             { id: 'seller_sales', label: 'Vendas', icon: BarChart3, adminOnly: true },
@@ -248,39 +214,10 @@ const AdminDashboard = () => {
                                 onClick={() => setActiveTab(tab.id as any)}
                                 className={`relative flex h-11 items-center gap-2 rounded-xl px-5 text-[10px] font-black uppercase tracking-widest transition-all duration-300 font-display ${activeTab === tab.id
                                     ? 'bg-fuchsia-500 text-white shadow-lg shadow-fuchsia-500/20'
-                                    : tab.id === 'alerts' && openSecurityAlertsCount > 0
-                                        ? 'bg-red-500/10 text-red-200 hover:bg-red-500/15 animate-pulse'
-                                        : tab.id === 'withdrawals' && pendingManualReviewPixWithdrawalCount > 0
-                                            ? 'bg-red-500/10 text-red-200 hover:bg-red-500/15 animate-pulse'
-                                            : 'bg-white/5 text-slate-500 hover:text-white hover:bg-white/10'}`}
+                                    : 'bg-white/5 text-slate-500 hover:text-white hover:bg-white/10'}`}
                             >
                                 <tab.icon className="h-4 w-4" />
                                 {tab.label}
-                                {tab.id === 'alerts' && openSecurityAlertsCount > 0 && (
-                                    <>
-                                        <span className="rounded-full border border-red-400/30 bg-red-500/20 px-2 py-0.5 text-[9px] font-black text-white">
-                                            {openSecurityAlertsCount}
-                                        </span>
-                                        {criticalSecurityAlertsCount > 0 && (
-                                            <span className="absolute right-2 top-2 h-2.5 w-2.5 rounded-full bg-red-400 shadow-[0_0_12px_rgba(248,113,113,0.95)]" />
-                                        )}
-                                    </>
-                                )}
-                                {tab.id === 'reviews' && openManualReviewCount > 0 && (
-                                    <span className="rounded-full border border-amber-400/30 bg-amber-500/20 px-2 py-0.5 text-[9px] font-black text-white">
-                                        {openManualReviewCount}
-                                    </span>
-                                )}
-                                {tab.id === 'withdrawals' && openPixWithdrawalCount > 0 && (
-                                    <>
-                                        <span className={`rounded-full border px-2 py-0.5 text-[9px] font-black text-white ${pendingManualReviewPixWithdrawalCount > 0 ? 'border-red-400/30 bg-red-500/20' : 'border-cyan-400/30 bg-cyan-500/20'}`}>
-                                            {openPixWithdrawalCount}
-                                        </span>
-                                        {pendingManualReviewPixWithdrawalCount > 0 && (
-                                            <span className="absolute right-2 top-2 h-2.5 w-2.5 rounded-full bg-red-400 shadow-[0_0_12px_rgba(248,113,113,0.95)] animate-pulse" />
-                                        )}
-                                    </>
-                                )}
                                 {tab.id === 'news' && adminNewsItems.length > 0 && (
                                     <span className="rounded-full border border-emerald-400/30 bg-emerald-500/20 px-2 py-0.5 text-[9px] font-black text-white">
                                         {adminNewsItems.length}
@@ -340,47 +277,8 @@ const AdminDashboard = () => {
                             />
                         )}
 
-                        {activeTab === 'alerts' && (
-                            <SecurityAlertsPanel
-                                alerts={securityAlerts}
-                                loading={securityAlertsLoading}
-                                error={securityAlertsError}
-                                onRefresh={fetchSecurityAlerts}
-                                onAcknowledge={acknowledgeSecurityAlert}
-                                acknowledgingAlertId={acknowledgingAlertId}
-                                onActionClick={(tab) => setActiveTab(tab as typeof activeTab)}
-                            />
-                        )}
-
-                        {activeTab === 'reviews' && (
-                                <ManualReviewQueuePanel
-                                    tasks={manualReviewTasks}
-                                    loading={manualReviewLoading}
-                                    onRefresh={fetchManualReviewTasks}
-                                    votesByTask={manualReviewVotesByTask}
-                                    fetchVotes={fetchManualReviewVotes}
-                                    settlingTaskId={manualReviewSettlingTaskId}
-                                onForceSettle={forceSettleManualReviewTask}
-                                onVoidTask={cancelManualReviewTask}
-                                bulkLoading={manualReviewBulkLoading}
-                                onBulkSettle={bulkSettleManualReviewTasks}
-                                onBulkVoid={bulkCancelManualReviewTasks}
-                            />
-                        )}
-
-                        {activeTab === 'withdrawals' && (
-                            <WithdrawalReviewPanel
-                                withdrawals={pixWithdrawals}
-                                loading={pixWithdrawalsLoading}
-                                error={pixWithdrawalsError}
-                                resolvingId={pixWithdrawalResolvingId}
-                                onRefresh={fetchPixWithdrawals}
-                                onApproveManualReview={approvePixWithdrawalManualReview}
-                                onRejectManualReview={rejectPixWithdrawalManualReview}
-                                onCompleteManually={completePixWithdrawalManually}
-                                onGetFullKey={getPixWithdrawalFullKey}
-                            />
-                        )}
+                        {/* Abas 'alerts', 'reviews' e 'withdrawals' removidas da UI
+                            em 2026-04-19 — RPCs e dados no banco preservados. */}
 
                         {activeTab === 'news' && (
                             <NewsManagement
