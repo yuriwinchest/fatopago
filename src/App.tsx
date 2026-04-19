@@ -1,9 +1,10 @@
-import { Suspense, lazy, ComponentType, useEffect } from 'react';
+import { Suspense, lazy, ComponentType, useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import PageLoader from './components/ui/PageLoader';
 import { attemptChunkRecovery, isChunkLoadError } from './lib/chunkRecovery';
 import { initializeMetaPixel, trackMetaPixelPageView } from './lib/metaPixel';
+import { startVersionCheck, subscribeVersionCheck } from './lib/versionCheck';
 import './App.css';
 
 // Wrapper que recarrega a página com cache-busting se o chunk falhar após deploy novo.
@@ -58,10 +59,65 @@ function MetaPixelTracker() {
     return null;
 }
 
+function NewVersionBanner() {
+    const [visible, setVisible] = useState(false);
+
+    useEffect(() => {
+        startVersionCheck();
+        const unsub = subscribeVersionCheck(({ hasNewVersion }) => {
+            if (hasNewVersion) setVisible(true);
+        });
+        return unsub;
+    }, []);
+
+    if (!visible) return null;
+
+    return (
+        <div
+            role="status"
+            style={{
+                position: 'fixed',
+                bottom: 16,
+                left: '50%',
+                transform: 'translateX(-50%)',
+                zIndex: 9999,
+                background: '#111827',
+                color: '#fff',
+                padding: '12px 16px',
+                borderRadius: 12,
+                boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
+                display: 'flex',
+                gap: 12,
+                alignItems: 'center',
+                fontSize: 14,
+                maxWidth: '92vw',
+            }}
+        >
+            <span>Nova versão disponível.</span>
+            <button
+                type="button"
+                onClick={() => window.location.reload()}
+                style={{
+                    background: '#8b5cf6',
+                    color: '#fff',
+                    border: 0,
+                    padding: '6px 12px',
+                    borderRadius: 8,
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                }}
+            >
+                Atualizar
+            </button>
+        </div>
+    );
+}
+
 function App() {
     return (
         <Router>
             <MetaPixelTracker />
+            <NewVersionBanner />
             <Suspense fallback={null}>
                 <LocalSentrySmokeTest />
             </Suspense>

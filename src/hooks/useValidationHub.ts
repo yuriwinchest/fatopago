@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '../lib/supabase';
+import { forceReloadOnGatewayError } from '../lib/versionCheck';
 import { NewsTask } from '../types';
 import { getRewardByCategory } from '../lib/planRules';
 import { VALIDATION_CATEGORIES } from '../lib/newsCategories';
@@ -253,6 +254,10 @@ export function useValidationHub() {
                 setTasks(rows);
                 setHasMore(rows.length === PAGE_SIZE);
             } catch (err: any) {
+                // Se vem 502/503/504 do proxy, o cliente esta em bundle
+                // obsoleto que nao suporta o volume atual de UUIDs. Auto-reload
+                // pega a versao nova (que usa RPC server-side).
+                if (forceReloadOnGatewayError(err)) return;
                 console.error(err);
                 setError(err.message || 'Falha ao carregar notícias.');
             } finally {
@@ -324,6 +329,8 @@ export function useValidationHub() {
 
             setHasMore(rows.length === PAGE_SIZE);
         } catch (err: any) {
+            // Bundle antigo batendo em 502/503/504 -> auto-reload.
+            if (forceReloadOnGatewayError(err)) return;
             console.error(err);
         } finally {
             setLoadingMore(false);
