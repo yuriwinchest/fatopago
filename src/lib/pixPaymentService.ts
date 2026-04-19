@@ -114,21 +114,25 @@ const inferPixErrorCode = (status: number, message: string) => {
 const buildPixApiError = async (response: Response, fallbackMessage: string) => {
   const data = await response.json().catch(() => null as any);
 
-  const details =
-    typeof data?.details === 'string'
-      ? data.details
-      : data?.details
-        ? JSON.stringify(data.details)
-        : '';
-
-  const base =
+  // message fica LIMPO — apenas a mensagem amigavel (ou fallback).
+  // Payload tecnico fica em details, acessivel via error.details, mas
+  // NUNCA concatenado em message (evita vazamento de JSON ao usuario).
+  const message =
     data?.error ||
     data?.message ||
     (typeof data === 'string' ? data : null) ||
     fallbackMessage;
 
-  const message = details ? `${base}: ${details}` : base;
   const code = inferPixErrorCode(response.status, message);
+
+  // Log tecnico apenas no console do dev (nao vai pro usuario).
+  if (data?.details && typeof console !== 'undefined') {
+    try {
+      console.warn('[PixApiError details]', { status: response.status, code, details: data.details });
+    } catch {
+      /* noop */
+    }
+  }
 
   return new PixApiError(message, response.status, code, data?.details);
 };
@@ -152,7 +156,9 @@ export const getFriendlyPixCheckoutErrorMessage = (error: unknown) => {
     case 'invalid_payment_guard':
       return 'O backend bloqueou o pagamento por divergência de segurança. Gere um novo PIX.';
     default:
-      return error.message || 'Não foi possível gerar o PIX agora. Tente novamente.';
+      // NUNCA retornar error.message cru no default — pode conter payload
+      // tecnico. Fallback generico mantido mesmo quando code e unknown.
+      return 'Não foi possível gerar o PIX agora. Tente novamente em instantes.';
   }
 };
 

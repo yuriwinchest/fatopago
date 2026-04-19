@@ -326,7 +326,7 @@ const PixPaymentModal = ({
                       setStep('qr_code');
                     })
                     .catch(err => {
-                      setError(err.message);
+                      setError(getFriendlyPixCheckoutErrorMessage(err));
                       setStep('error');
                     });
                 }}
@@ -365,7 +365,7 @@ const PixPaymentModal = ({
                       setStep('qr_code');
                     })
                     .catch(err => {
-                      setError(err.message);
+                      setError(getFriendlyPixCheckoutErrorMessage(err));
                       setStep('error');
                     });
                 }}
