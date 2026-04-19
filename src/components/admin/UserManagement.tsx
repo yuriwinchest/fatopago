@@ -1,5 +1,5 @@
-import React from 'react';
-import { Search, User, Trash2 } from 'lucide-react';
+import React, { useMemo } from 'react';
+import { Search, User, Trash2, Users as UsersIcon, CheckCircle2, ShoppingBag, UserX } from 'lucide-react';
 import { ExtendedAdminUser } from '../../hooks/useAdminData';
 import { formatBRL, formatDateTimeBR } from '../../utils/format';
 
@@ -28,15 +28,30 @@ const UserManagement: React.FC<UserManagementProps> = ({
     handleDelete,
     handleUserClick
 }) => {
+    // Stats agregadas sobre TODOS os users (nao apenas filtrados):
+    // - Total cadastrados
+    // - Com plano ativo agora (plan_status='active')
+    // - Ja assinaram pelo menos 1 pacote (total_loaded > 0 = carregou saldo
+    //   via compra de plano em algum momento)
+    // - Nunca assinaram (total - ever_purchased, exclui deletados pra clareza)
+    const stats = useMemo(() => {
+        const total = users.length;
+        const activeNow = users.filter(u => u.plan_status === 'active').length;
+        const deletedCount = users.filter(u => u.plan_status === 'deleted').length;
+        const everPurchased = users.filter(u => (u.total_loaded || 0) > 0).length;
+        const neverPurchased = Math.max(0, total - everPurchased - deletedCount);
+        return { total, activeNow, everPurchased, neverPurchased, deletedCount };
+    }, [users]);
+
     const filteredUsers = users.filter(user => {
-        const matchesSearch = 
+        const matchesSearch =
             user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
             user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
             user.lastname?.toLowerCase().includes(searchTerm.toLowerCase()) ||
             (searchTerm.replace(/\D/g, '') &&
                 user.cpf?.replace(/\D/g, '').includes(searchTerm.replace(/\D/g, '')));
 
-        const matchesDate = !registrationDateFilter || 
+        const matchesDate = !registrationDateFilter ||
             new Date(user.created_at).toISOString().split('T')[0] === registrationDateFilter;
 
         return matchesSearch && matchesDate;
@@ -53,6 +68,63 @@ const UserManagement: React.FC<UserManagementProps> = ({
 
     return (
         <>
+            {/* Stats cards: visao agregada dos usuarios cadastrados */}
+            <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
+                <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                    <div className="flex items-center gap-2 text-slate-400">
+                        <UsersIcon className="h-4 w-4" />
+                        <span className="text-xs font-medium uppercase tracking-wide">Total cadastrados</span>
+                    </div>
+                    <div className="mt-2 text-2xl font-bold text-white sm:text-3xl">
+                        {stats.total.toLocaleString('pt-BR')}
+                    </div>
+                    {stats.deletedCount > 0 && (
+                        <div className="mt-1 text-[11px] text-slate-500">
+                            inclui {stats.deletedCount} anonimizados
+                        </div>
+                    )}
+                </div>
+
+                <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.08] p-4">
+                    <div className="flex items-center gap-2 text-emerald-400">
+                        <CheckCircle2 className="h-4 w-4" />
+                        <span className="text-xs font-medium uppercase tracking-wide">Plano ativo agora</span>
+                    </div>
+                    <div className="mt-2 text-2xl font-bold text-white sm:text-3xl">
+                        {stats.activeNow.toLocaleString('pt-BR')}
+                    </div>
+                    <div className="mt-1 text-[11px] text-slate-500">
+                        {stats.total > 0 ? `${Math.round((stats.activeNow / stats.total) * 100)}% do total` : ''}
+                    </div>
+                </div>
+
+                <div className="rounded-2xl border border-purple-500/20 bg-purple-500/[0.08] p-4">
+                    <div className="flex items-center gap-2 text-purple-300">
+                        <ShoppingBag className="h-4 w-4" />
+                        <span className="text-xs font-medium uppercase tracking-wide">Já assinaram</span>
+                    </div>
+                    <div className="mt-2 text-2xl font-bold text-white sm:text-3xl">
+                        {stats.everPurchased.toLocaleString('pt-BR')}
+                    </div>
+                    <div className="mt-1 text-[11px] text-slate-500">
+                        histórico (qualquer pacote)
+                    </div>
+                </div>
+
+                <div className="rounded-2xl border border-slate-500/20 bg-slate-500/[0.06] p-4">
+                    <div className="flex items-center gap-2 text-slate-300">
+                        <UserX className="h-4 w-4" />
+                        <span className="text-xs font-medium uppercase tracking-wide">Nunca assinaram</span>
+                    </div>
+                    <div className="mt-2 text-2xl font-bold text-white sm:text-3xl">
+                        {stats.neverPurchased.toLocaleString('pt-BR')}
+                    </div>
+                    <div className="mt-1 text-[11px] text-slate-500">
+                        {stats.total > 0 ? `${Math.round((stats.neverPurchased / stats.total) * 100)}% do total` : ''}
+                    </div>
+                </div>
+            </div>
+
             {/* Search & Filter */}
             <div className="mb-8 flex flex-col gap-4 sm:flex-row">
                 <div className="relative flex-1">
