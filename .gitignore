@@ -166,3 +166,6 @@ node_modules/.package-lock.json
 *.tar
 *.tgz
 app.tar
+
+# Claude Code internal worktrees (gerados pela tool)
+.claude/worktrees/
