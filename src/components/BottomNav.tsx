@@ -26,7 +26,11 @@ const BottomNav = () => {
 
     const isActive = (path: string) => location.pathname === path;
 
-    if (isAdmin) return null;
+    // Esconde a nav mobile APENAS quando admin esta no dashboard admin.
+    // Em qualquer outra rota, admin ve a nav normal de user pra conseguir
+    // navegar e testar como usuario real. Sem isso, admin em rota de user
+    // ficava ilhado (bug reportado em prod).
+    if (isAdmin && location.pathname.startsWith('/admin')) return null;
 
     const navItems = [
         { icon: <Home className="w-6 h-6" />, label: 'Home', path: '/dashboard' },

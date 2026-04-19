@@ -112,6 +112,13 @@ Registra decisões e limitações **descobertas em produção** que afetam o des
 - Priorizar clareza, simplicidade, manutenibilidade, segurança, observabilidade.
 - Buscar sempre a solução mais simples e elegante com menor impacto.
 
+### 5.1 Regra de layout (não negociável)
+
+- **99% dos usuários acessam pelo smartphone** (Android + iOS). A aplicação **deve se comportar como nativa** nesses dispositivos — bottom nav fixa, gestos, toque, viewport otimizado, tipografia legível.
+- No **desktop**, a aplicação deve **se comportar como desktop** — top nav horizontal, layouts em grid amplos, uso de hover, atalhos de teclado quando faz sentido.
+- **Não quebrar essa regra.** Mesmo mudanças pequenas em componentes de navegação/layout devem preservar os dois comportamentos (classes `lg:hidden`, `hidden lg:flex` etc. em Tailwind).
+- Ao mexer em header, nav, modal ou qualquer elemento estrutural: validar visualmente nos **dois modos** antes de dar commit.
+
 ---
 
 ## 6. Regras operacionais críticas

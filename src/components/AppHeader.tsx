@@ -60,7 +60,12 @@ const AppHeader = ({
 
     const headerContainerClass = `relative z-30 bg-gradient-to-br from-[#1a0133] via-[#2e0259] to-[#1a0133] rounded-b-[40px] shadow-[0_20px_50px_rgba(0,0,0,0.5)] border-b border-white/5 pb-6 pt-[calc(2rem+env(safe-area-inset-top))] px-6 pl-safe pr-safe lg:mx-auto lg:mt-4 lg:max-w-[1400px] lg:rounded-[32px] lg:px-8 backdrop-blur-xl ${className}`;
 
-    if (isAdmin) {
+    // Header compacto do admin so faz sentido DENTRO do dashboard admin.
+    // Quando admin visita rota de user (ex.: /validation), o header normal
+    // deve aparecer pra admin poder navegar + um botao "Admin" pra voltar.
+    const isInAdminArea = location.pathname.startsWith('/admin');
+
+    if (isAdmin && isInAdminArea) {
         return (
             <div className={headerContainerClass}>
                 <div className="flex flex-col items-center justify-center pt-4">
@@ -116,19 +121,33 @@ const AppHeader = ({
                     <div />
                 )}
 
-                {showLogout && onLogout && (
-                    <button
-                        onClick={onLogout}
-                        className="pointer-events-auto rounded-full bg-white/10 p-2 text-white/80 shadow-sm backdrop-blur-sm transition-colors hover:bg-white/20 hover:text-white"
-                        title="Sair"
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                            <polyline points="16 17 21 12 16 7" />
-                            <line x1="21" x2="9" y1="12" y2="12" />
-                        </svg>
-                    </button>
-                )}
+                <div className="pointer-events-auto flex items-center gap-2">
+                    {isAdmin && (
+                        <button
+                            onClick={() => navigate('/admin-dashboard')}
+                            className="flex items-center gap-1.5 rounded-full bg-purple-600/90 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-white shadow-lg backdrop-blur-sm transition-all hover:bg-purple-500 hover:scale-105"
+                            title="Voltar ao painel Admin"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                            </svg>
+                            <span>Admin</span>
+                        </button>
+                    )}
+                    {showLogout && onLogout && (
+                        <button
+                            onClick={onLogout}
+                            className="rounded-full bg-white/10 p-2 text-white/80 shadow-sm backdrop-blur-sm transition-colors hover:bg-white/20 hover:text-white"
+                            title="Sair"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                                <polyline points="16 17 21 12 16 7" />
+                                <line x1="21" x2="9" y1="12" y2="12" />
+                            </svg>
+                        </button>
+                    )}
+                </div>
             </div>
 
             {/* Centered Logo */}
