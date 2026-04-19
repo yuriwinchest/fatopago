@@ -146,3 +146,18 @@ deploy_vps.sh
 backup_legacy/
 *.bak
 *.backup
+
+# Root-level diagnostic/maintenance scripts (may contain credentials)
+/*.cjs
+!/.eslintrc.cjs
+
+# Temporary scripts
+tmp/
+
+# Midia local (nao pertence ao repo - usar cloud storage)
+vidoes/
+*.mp4
+*.mov
+
+# node_modules lock interno
+node_modules/.package-lock.json
