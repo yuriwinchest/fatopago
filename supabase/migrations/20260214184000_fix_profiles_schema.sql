@@ -1,0 +1,12 @@
+ALTER TABLE public.profiles
+ADD COLUMN IF NOT EXISTS avatar_url TEXT;
+ALTER TABLE public.profiles
+ADD COLUMN IF NOT EXISTS email TEXT;
+ALTER TABLE public.profiles
+ADD COLUMN IF NOT EXISTS name TEXT;
+ALTER TABLE public.profiles
+ADD COLUMN IF NOT EXISTS lastname TEXT;
+ALTER TABLE public.profiles
+ADD COLUMN IF NOT EXISTS city TEXT;
+ALTER TABLE public.profiles
+ADD COLUMN IF NOT EXISTS state TEXT;
