@@ -1,12 +1,19 @@
 
 const { NodeSSH } = require('node-ssh');
 const ssh = new NodeSSH();
+const fs = require('fs');
+const os = require('os');
 const path = require('path');
 
 const host = process.env.VPS_HOST;
 const username = process.env.VPS_USER;
 const password = process.env.VPS_PASSWORD;
-const privateKey = process.env.VPS_KEY_PATH;
+const defaultKeyPath = path.join(os.homedir(), '.ssh', 'fatopago_key');
+const privateKeyRaw = process.env.VPS_KEY_PATH || (fs.existsSync(defaultKeyPath) ? defaultKeyPath : undefined);
+const privateKey =
+    privateKeyRaw && typeof privateKeyRaw === 'string' && !privateKeyRaw.includes('BEGIN') && fs.existsSync(privateKeyRaw)
+        ? fs.readFileSync(privateKeyRaw, 'utf8')
+        : privateKeyRaw;
 const port = process.env.VPS_PORT ? Number(process.env.VPS_PORT) : undefined;
 
 if (!host || !username) {
@@ -22,7 +29,7 @@ async function deploy() {
     console.log(`Connecting to ${host}...`);
     try {
         if (!privateKey && !password) {
-            throw new Error('Defina VPS_KEY_PATH (recomendado) ou VPS_PASSWORD no ambiente.');
+            throw new Error('Defina VPS_KEY_PATH (recomendado) ou tenha a chave padrão em ~/.ssh/fatopago_key. Em último caso, use VPS_PASSWORD (apenas para provisionar a chave).');
         }
 
         await ssh.connect({
@@ -30,7 +37,12 @@ async function deploy() {
             username,
             port,
             ...(privateKey ? { privateKey } : { password }),
-            tryKeyboard: true
+            tryKeyboard: true,
+            // Some VPS providers can be slow to complete SSH handshake during load.
+            // ssh2 defaults can time out too aggressively here.
+            readyTimeout: process.env.VPS_READY_TIMEOUT ? Number(process.env.VPS_READY_TIMEOUT) : 60000,
+            keepaliveInterval: 10000,
+            keepaliveCountMax: 10
         });
         console.log('Connected!');
 

@@ -1,5 +1,6 @@
 const { NodeSSH } = require('node-ssh');
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 
 const ssh = new NodeSSH();
@@ -41,7 +42,15 @@ async function uploadDist() {
         }
         const username = process.env.VPS_USER || 'root';
         const password = process.env.VPS_PASSWORD;
-        const privateKey = process.env.VPS_KEY_PATH;
+        const defaultKeyPath = path.join(os.homedir(), '.ssh', 'fatopago_key');
+        const privateKeyRaw = process.env.VPS_KEY_PATH || (fs.existsSync(defaultKeyPath) ? defaultKeyPath : undefined);
+        const privateKey =
+            privateKeyRaw &&
+                typeof privateKeyRaw === 'string' &&
+                !privateKeyRaw.includes('BEGIN') &&
+                fs.existsSync(privateKeyRaw)
+                ? fs.readFileSync(privateKeyRaw, 'utf8')
+                : privateKeyRaw;
         const port = process.env.VPS_PORT ? Number(process.env.VPS_PORT) : undefined;
 
         if (!host || !username) {
@@ -62,8 +71,9 @@ async function uploadDist() {
         });
 
         console.log('Limpando dist remoto...');
-        await ssh.execCommand('rm -rf /var/www/fatopago/dist');
-        await ssh.execCommand('mkdir -p /var/www/fatopago');
+        // Keep the bind-mounted dist directory itself to avoid breaking Docker bind mounts.
+        await ssh.execCommand('mkdir -p /var/www/fatopago/dist');
+        await ssh.execCommand('find /var/www/fatopago/dist -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +');
 
         console.log('Enviando dist...');
         const localDist = path.join(__dirname, '../dist');
@@ -71,6 +81,9 @@ async function uploadDist() {
             recursive: true,
             concurrency: 1
         });
+
+        // Remove world-writable permissions; nginx only needs read access.
+        await ssh.execCommand("chmod -R u=rwX,go=rX -- /var/www/fatopago/dist");
 
         console.log('✅ Deploy concluído com sucesso!');
         ssh.dispose();

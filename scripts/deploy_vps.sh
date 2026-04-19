@@ -70,10 +70,18 @@ npm install
 echo "Building application..."
 npm run build
 
+# Detect whether this tarball includes a backend (optional).
+HAS_BACKEND=0
+BACKEND_ENTRY="$TARGET_DIR/server/index.js"
+if [ -f "$BACKEND_ENTRY" ]; then
+    HAS_BACKEND=1
+fi
+
 # 8. Configure Nginx
 echo "Configuring Nginx..."
 NGINX_CONF="/etc/nginx/conf.d/$DOMAIN.conf"
-cat > $NGINX_CONF <<EOF
+if [ "$HAS_BACKEND" -eq 1 ]; then
+    cat > $NGINX_CONF <<EOF
 server {
     listen 80;
     server_name $DOMAIN www.$DOMAIN;
@@ -96,6 +104,21 @@ server {
     }
 }
 EOF
+else
+    cat > $NGINX_CONF <<EOF
+server {
+    listen 80;
+    server_name $DOMAIN www.$DOMAIN;
+
+    root $TARGET_DIR/dist;
+    index index.html;
+
+    location / {
+        try_files \$uri \$uri/ /index.html;
+    }
+}
+EOF
+fi
 
 # Remove default server if it exists/conflicts
 rm -f /etc/nginx/conf.d/default.conf
@@ -104,20 +127,26 @@ rm -f /etc/nginx/conf.d/default.conf
 echo "Fixing Permissions and SELinux contexts..."
 chown -R nginx:nginx $TARGET_DIR
 chmod -R 755 $TARGET_DIR
-# Allow Nginx to connect to network (for proxy) and serve files
-setsebool -P httpd_can_network_connect 1 || true
+# Allow Nginx to connect to network (only needed for proxy use-cases)
+if [ "$HAS_BACKEND" -eq 1 ]; then
+    setsebool -P httpd_can_network_connect 1 || true
+fi
 # Update context for web files
 semanage fcontext -a -t httpd_sys_content_t "$TARGET_DIR(/.*)?" || true
 restorecon -Rv $TARGET_DIR || true
 
 # 10. Start Services
-echo "Starting Backend with PM2..."
-cd $TARGET_DIR
-# Stop existing process if any
-pm2 delete fatopago-api || true
-# Start new process
-pm2 start server/index.js --name fatopago-api
-pm2 save
+if [ "$HAS_BACKEND" -eq 1 ]; then
+    echo "Starting Backend with PM2..."
+    cd $TARGET_DIR
+    # Stop existing process if any
+    pm2 delete fatopago-api || true
+    # Start new process
+    pm2 start "$BACKEND_ENTRY" --name fatopago-api
+    pm2 save
+else
+    echo "No backend detected (missing $BACKEND_ENTRY). Skipping PM2 start."
+fi
 
 echo "Starting Nginx..."
 systemctl enable --now nginx

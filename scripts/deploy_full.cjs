@@ -6,12 +6,21 @@ dotenv.config({ path: path.join(__dirname, '../.env') });
 const { NodeSSH } = require('node-ssh');
 const ssh = new NodeSSH();
 const fs = require('fs');
+const os = require('os');
 const { execSync } = require('child_process');
 
 const host = process.env.VPS_HOST;
-const username = process.env.VPS_USER;
+const username = process.env.VPS_USER || 'root';
 const password = process.env.VPS_PASSWORD;
-const privateKey = process.env.VPS_KEY_PATH;
+const defaultKeyPath = path.join(os.homedir(), '.ssh', 'fatopago_key');
+const privateKeyRaw = process.env.VPS_KEY_PATH || (fs.existsSync(defaultKeyPath) ? defaultKeyPath : undefined);
+const privateKey =
+    privateKeyRaw &&
+        typeof privateKeyRaw === 'string' &&
+        !privateKeyRaw.includes('BEGIN') &&
+        fs.existsSync(privateKeyRaw)
+        ? fs.readFileSync(privateKeyRaw, 'utf8')
+        : privateKeyRaw;
 const port = process.env.VPS_PORT ? Number(process.env.VPS_PORT) : 22;
 
 if (!host || !username) {
@@ -29,6 +38,22 @@ const localServer = path.join(__dirname, '../server');
 const localPackageJson = path.join(__dirname, '../package.json');
 const localPackageLock = path.join(__dirname, '../package-lock.json');
 
+function shQuotePosix(s) {
+    return `'${String(s).replace(/'/g, `'\\''`)}'`;
+}
+
+function assertSafeTarget(target) {
+    if (!target || target === '/' || target === '/root' || target === '/var' || target === '/var/www') {
+        throw new Error(`Destino remoto inválido: ${target}`);
+    }
+    if (!target.startsWith('/var/www/')) {
+        throw new Error(`Destino remoto fora do allowlist: ${target}`);
+    }
+    if (!/^\/var\/www\/[A-Za-z0-9._/-]+$/.test(target) || target.includes('..')) {
+        throw new Error(`Destino remoto contém caracteres inválidos: ${target}`);
+    }
+}
+
 async function deployFullStack() {
     console.log('🚀 Iniciando Deploy Full Stack...');
 
@@ -45,6 +70,7 @@ async function deployFullStack() {
 
     console.log('🔌 Conectando na VPS...');
     try {
+        assertSafeTarget(remoteServerDir);
         await ssh.connect({
             host,
             username,
@@ -58,8 +84,9 @@ async function deployFullStack() {
         console.log('🧹 Limpando diretórios remotos...');
         // NÃO apagar node_modules se existir para economizar tempo, apenas código
         // Mas para garantir limpamos dist e server
-        await ssh.execCommand(`rm -rf ${remoteServerDir}/dist ${remoteServerDir}/server`);
-        await ssh.execCommand(`mkdir -p ${remoteServerDir}/dist ${remoteServerDir}/server ${remoteServerDir}/certs`);
+        const baseQ = shQuotePosix(remoteServerDir);
+        await ssh.execCommand(`rm -rf -- ${baseQ}/dist ${baseQ}/server`);
+        await ssh.execCommand(`mkdir -p -- ${baseQ}/dist ${baseQ}/server ${baseQ}/certs`);
 
         // 3. Upload Arquivos
         console.log('📤 Enviando arquivos...');
@@ -75,6 +102,9 @@ async function deployFullStack() {
             recursive: true,
             concurrency: 5
         });
+
+        // Prevent world-writable artifacts.
+        await ssh.execCommand(`chmod -R u=rwX,go=rX -- ${baseQ}/dist ${baseQ}/server`);
 
         // Package.json para dependências
         await ssh.putFile(localPackageJson, `${remoteServerDir}/package.json`);

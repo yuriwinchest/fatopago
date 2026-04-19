@@ -1,22 +1,29 @@
 const { NodeSSH } = require('node-ssh');
 const path = require('path');
+const fs = require('fs');
+const os = require('os');
 
 const ssh = new NodeSSH();
 
+require('dotenv').config({ path: path.join(__dirname, '../.env.local') });
+require('dotenv').config({ path: path.join(__dirname, '../.env') });
+
 const host = process.env.VPS_HOST;
-const username = process.env.VPS_USER;
+if (!host) throw new Error('VPS_HOST environment variable is required');
+const username = process.env.VPS_USER || 'root';
 const password = process.env.VPS_PASSWORD;
-const privateKey = process.env.VPS_KEY_PATH;
+const defaultKeyPath = path.join(os.homedir(), '.ssh', 'fatopago_key');
+const privateKeyRaw = process.env.VPS_KEY_PATH || (fs.existsSync(defaultKeyPath) ? defaultKeyPath : undefined);
+const privateKey =
+  privateKeyRaw &&
+  typeof privateKeyRaw === 'string' &&
+  !privateKeyRaw.includes('BEGIN') &&
+  fs.existsSync(privateKeyRaw)
+    ? fs.readFileSync(privateKeyRaw, 'utf8')
+    : privateKeyRaw;
 const port = process.env.VPS_PORT ? Number(process.env.VPS_PORT) : undefined;
 
-const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-let serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-if (!host || !username) throw new Error('Defina VPS_HOST e VPS_USER no ambiente.');
 if (!privateKey && !password) throw new Error('Defina VPS_KEY_PATH (recomendado) ou VPS_PASSWORD no ambiente.');
-if (!supabaseUrl || !serviceKey) {
-  throw new Error('Defina SUPABASE_URL (ou VITE_SUPABASE_URL) e SUPABASE_SERVICE_ROLE_KEY no ambiente.');
-}
 
 const appDir = process.env.VPS_NEWS_WORKER_DIR || '/var/www/fatopago-worker';
 const localIngest = path.join(__dirname, 'news_ingest.cjs');
@@ -29,18 +36,21 @@ async function main() {
     port,
     ...(privateKey ? { privateKey } : { password }),
     tryKeyboard: true,
+    readyTimeout: 30000,
+    keepaliveInterval: 10000,
   });
 
   await ssh.execCommand(`mkdir -p ${appDir}/scripts`);
   await ssh.putFile(localIngest, `${appDir}/scripts/news_ingest.cjs`);
   await ssh.putFile(localWorker, `${appDir}/scripts/live_news_worker.cjs`);
 
-  const hasEnv = Boolean(supabaseUrl && serviceKey);
-  const envPrefix = hasEnv
-    ? `SUPABASE_URL=${JSON.stringify(supabaseUrl)} SUPABASE_SERVICE_ROLE_KEY=${JSON.stringify(serviceKey)} `
-    : '';
-  const cmd = `${envPrefix}pm2 restart fatopago-news${hasEnv ? ' --update-env' : ''}`;
-  const res = await ssh.execCommand(cmd, { cwd: appDir });
+  // Restart without passing secrets on the command line; rely on ${appDir}/.env on the VPS.
+  const cmd =
+    `bash -lc 'set -a; ` +
+    `. ${appDir}/.env 2>/dev/null || true; ` +
+    `set +a; ` +
+    `cd ${appDir} && pm2 restart fatopago-news --update-env || true'`;
+  const res = await ssh.execCommand(cmd, { execOptions: { pty: true } });
   if (res.stdout) process.stdout.write(res.stdout);
   if (res.stderr) process.stderr.write(res.stderr);
 

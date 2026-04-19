@@ -1,6 +1,8 @@
 
 const { NodeSSH } = require('node-ssh');
 const ssh = new NodeSSH();
+const fs = require('fs');
+const os = require('os');
 const path = require('path');
 
 require('dotenv').config({ path: path.join(__dirname, '../.env.local') });
@@ -10,7 +12,12 @@ const host = process.env.VPS_HOST;
 if (!host) throw new Error('VPS_HOST environment variable is required');
 const username = process.env.VPS_USER || 'root';
 const password = process.env.VPS_PASSWORD;
-const privateKey = process.env.VPS_KEY_PATH;
+const defaultKeyPath = path.join(os.homedir(), '.ssh', 'fatopago_key');
+const privateKeyRaw = process.env.VPS_KEY_PATH || (fs.existsSync(defaultKeyPath) ? defaultKeyPath : undefined);
+const privateKey =
+    privateKeyRaw && typeof privateKeyRaw === 'string' && !privateKeyRaw.includes('BEGIN') && fs.existsSync(privateKeyRaw)
+        ? fs.readFileSync(privateKeyRaw, 'utf8')
+        : privateKeyRaw;
 const port = process.env.VPS_PORT ? Number(process.env.VPS_PORT) : undefined;
 
 if (!host || !username) {
@@ -26,9 +33,11 @@ const filesToUpload = [
     { local: '../tsconfig.node.json', remote: '/var/www/fatopago/tsconfig.node.json' },
     { local: '../src/main.tsx', remote: '/var/www/fatopago/src/main.tsx' },
     { local: '../src/components/ErrorBoundary.tsx', remote: '/var/www/fatopago/src/components/ErrorBoundary.tsx' },
-    { local: '../src/components/PaymentModal.tsx', remote: '/var/www/fatopago/src/components/PaymentModal.tsx' },
+    { local: '../src/components/PixPaymentModal.tsx', remote: '/var/www/fatopago/src/components/PixPaymentModal.tsx' },
+    { local: '../src/components/WithdrawalModal.tsx', remote: '/var/www/fatopago/src/components/WithdrawalModal.tsx' },
+    { local: '../src/lib/pixPaymentService.ts', remote: '/var/www/fatopago/src/lib/pixPaymentService.ts' },
+    { local: '../src/pages/LandingPage.tsx', remote: '/var/www/fatopago/src/pages/LandingPage.tsx' },
     { local: '../src/pages/Plans.tsx', remote: '/var/www/fatopago/src/pages/Plans.tsx' },
-    { local: '../server/index.js', remote: '/var/www/fatopago/server/index.js' }
 ];
 
 async function patchFrontend() {
